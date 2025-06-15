@@ -95,7 +95,7 @@
         }
         
         .form-container {
-            max-width: 600px;
+            max-width: 800px;
             margin: 2rem auto;
             padding: 1.5rem;
             border: 1px solid #ddd;
@@ -293,6 +293,159 @@
             margin: 0.5rem 0;
             color: #555;
         }
+
+        .amenities-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 1rem;
+            margin: 1rem 0;
+        }
+
+        .amenity-item {
+            display: flex;
+            align-items: center;
+        }
+
+        .amenity-item input {
+            margin-right: 0.5rem;
+        }
+
+        .profile-container {
+            display: flex;
+            gap: 2rem;
+            margin-top: 1.5rem;
+        }
+
+        .profile-sidebar {
+            width: 250px;
+            background: #f0f8ff;
+            padding: 1.5rem;
+            border-radius: 8px;
+            height: fit-content;
+        }
+
+        .profile-content {
+            flex: 1;
+        }
+
+        .user-avatar {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin: 0 auto 1rem;
+            display: block;
+            border: 3px solid #0056b3;
+        }
+
+        .reservations-list {
+            margin-top: 1.5rem;
+        }
+
+        .reservation-card {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            background: white;
+        }
+
+        .reservation-card h4 {
+            margin-top: 0;
+            color: #0056b3;
+        }
+
+        .reservation-status {
+            display: inline-block;
+            padding: 0.3rem 0.6rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+
+        .status-pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status-confirmed {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-cancelled {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .tab-container {
+            margin-bottom: 1.5rem;
+        }
+
+        .tab-buttons {
+            display: flex;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .tab-button {
+            padding: 0.8rem 1.5rem;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 1rem;
+            color: #555;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s;
+        }
+
+        .tab-button.active {
+            color: #0056b3;
+            border-bottom: 3px solid #0056b3;
+            font-weight: bold;
+        }
+
+        .tab-content {
+            display: none;
+            padding: 1.5rem 0;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .user-properties {
+            margin-top: 1.5rem;
+        }
+
+        .property-actions {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+
+        .property-actions button {
+            padding: 0.5rem;
+            font-size: 0.8rem;
+        }
+
+        .edit-btn {
+            background: #ffc107;
+        }
+
+        .delete-btn {
+            background: #dc3545;
+        }
+
+        .form-row {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .form-row .form-group {
+            flex: 1;
+            margin-bottom: 0;
+        }
     </style>
 </head>
 <body>
@@ -308,6 +461,7 @@
             <li><a href="#" onclick="showSection('publish')">Publicar</a></li>
             <li id="register-nav-item"><a href="#" onclick="showSection('register')">Registrarse</a></li>
             <li id="login-nav-item"><a href="#" onclick="showSection('login')">Iniciar Sesión</a></li>
+            <li id="profile-nav-item" class="hidden"><a href="#" onclick="showSection('profile')">Mi Perfil</a></li>
             <li id="logout-nav-item" class="hidden"><a href="#" onclick="logout()" class="logout-btn">Cerrar Sesión</a></li>
             <li><a href="#" onclick="showSection('contact')">Contacto</a></li>
         </ul>
@@ -353,72 +507,262 @@
             
             <div id="publish-form-container" class="hidden">
                 <form id="publish-form" class="form-container">
-                    <h3>Información de la Propiedad</h3>
+                    <h3>Información Básica</h3>
                     
-                    <div class="form-group">
-                        <label for="property-type">Tipo de propiedad:</label>
-                        <select id="property-type" required>
-                            <option value="">Seleccione...</option>
-                            <option value="apartment">Apartamento</option>
-                            <option value="house">Casa</option>
-                            <option value="room">Habitación</option>
-                        </select>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="property-type">Tipo de propiedad:</label>
+                            <select id="property-type" required>
+                                <option value="">Seleccione...</option>
+                                <option value="apartment">Apartamento</option>
+                                <option value="house">Casa</option>
+                                <option value="room">Habitación</option>
+                                <option value="hostel">Hostal</option>
+                                <option value="hotel">Hotel</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="property-operation">Tipo de operación:</label>
+                            <select id="property-operation" required>
+                                <option value="rent">Arriendo</option>
+                                <option value="sale">Venta</option>
+                            </select>
+                        </div>
                     </div>
                     
                     <div class="form-group">
                         <label for="property-title">Título del anuncio:</label>
-                        <input type="text" id="property-title" required>
+                        <input type="text" id="property-title" placeholder="Ej: Acogedor apartamento en Bocagrande con vista al mar" required>
                     </div>
                     
                     <div class="form-group">
-                        <label for="property-description">Descripción:</label>
-                        <textarea id="property-description" rows="6" required></textarea>
+                        <label for="property-description">Descripción detallada:</label>
+                        <textarea id="property-description" rows="6" placeholder="Describe tu propiedad con detalles como distribución, mobiliario, servicios incluidos, etc." required></textarea>
                     </div>
                     
-                    <div class="form-group">
-                        <label for="property-address">Dirección:</label>
-                        <input type="text" id="property-address" required>
+                    <h3>Ubicación</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="property-address">Dirección exacta:</label>
+                            <input type="text" id="property-address" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="property-zone">Zona/Barrio:</label>
+                            <select id="property-zone" required>
+                                <option value="">Seleccione...</option>
+                                <option value="bocagrande">Bocagrande</option>
+                                <option value="getsemani">Getsemaní</option>
+                                <option value="centro">Centro Histórico</option>
+                                <option value="manga">Manga</option>
+                                <option value="castillogrande">Castillo Grande</option>
+                                <option value="laguito">El Laguito</option>
+                                <option value="bocachica">Boca Chica</option>
+                                <option value="lacrespa">La Crespa</option>
+                                <option value="marbella">Marbella</option>
+                            </select>
+                        </div>
                     </div>
                     
-                    <div class="form-group">
-                        <label for="property-zone">Zona:</label>
-                        <select id="property-zone" required>
-                            <option value="">Seleccione...</option>
-                            <option value="bocagrande">Bocagrande</option>
-                            <option value="getsemani">Getsemaní</option>
-                            <option value="centro">Centro Histórico</option>
-                            <option value="manga">Manga</option>
-                        </select>
+                    <h3>Detalles de la Propiedad</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="property-price">Precio por noche (COP):</label>
+                            <input type="number" id="property-price" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="property-area">Área construida (m²):</label>
+                            <input type="number" id="property-area">
+                        </div>
                     </div>
                     
-                    <div class="form-group">
-                        <label for="property-price">Precio por noche (COP):</label>
-                        <input type="number" id="property-price" required>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="property-rooms">Habitaciones:</label>
+                            <input type="number" id="property-rooms" min="0">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="property-bathrooms">Baños:</label>
+                            <input type="number" id="property-bathrooms" min="1" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="property-capacity">Capacidad (personas):</label>
+                            <input type="number" id="property-capacity" min="1" required>
+                        </div>
                     </div>
                     
-                    <div class="form-group">
-                        <label for="property-rooms">Habitaciones:</label>
-                        <input type="number" id="property-rooms" min="1" required>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="property-floors">Pisos/Niveles:</label>
+                            <input type="number" id="property-floors" min="1" value="1">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="property-parking">Parqueaderos:</label>
+                            <input type="number" id="property-parking" min="0" value="0">
+                        </div>
                     </div>
                     
-                    <div class="form-group">
-                        <label for="property-bathrooms">Baños:</label>
-                        <input type="number" id="property-bathrooms" min="1" required>
+                    <h3>Comodidades y Servicios</h3>
+                    <div class="amenities-container">
+                        <div class="amenity-item">
+                            <input type="checkbox" id="amenity-wifi">
+                            <label for="amenity-wifi">Wi-Fi</label>
+                        </div>
+                        <div class="amenity-item">
+                            <input type="checkbox" id="amenity-air">
+                            <label for="amenity-air">Aire acondicionado</label>
+                        </div>
+                        <div class="amenity-item">
+                            <input type="checkbox" id="amenity-pool">
+                            <label for="amenity-pool">Piscina</label>
+                        </div>
+                        <div class="amenity-item">
+                            <input type="checkbox" id="amenity-kitchen">
+                            <label for="amenity-kitchen">Cocina equipada</label>
+                        </div>
+                        <div class="amenity-item">
+                            <input type="checkbox" id="amenity-tv">
+                            <label for="amenity-tv">Televisión</label>
+                        </div>
+                        <div class="amenity-item">
+                            <input type="checkbox" id="amenity-laundry">
+                            <label for="amenity-laundry">Lavadora</label>
+                        </div>
+                        <div class="amenity-item">
+                            <input type="checkbox" id="amenity-gym">
+                            <label for="amenity-gym">Gimnasio</label>
+                        </div>
+                        <div class="amenity-item">
+                            <input type="checkbox" id="amenity-elevator">
+                            <label for="amenity-elevator">Ascensor</label>
+                        </div>
+                        <div class="amenity-item">
+                            <input type="checkbox" id="amenity-security">
+                            <label for="amenity-security">Seguridad 24/7</label>
+                        </div>
+                        <div class="amenity-item">
+                            <input type="checkbox" id="amenity-beach">
+                            <label for="amenity-beach">Acceso a playa</label>
+                        </div>
+                        <div class="amenity-item">
+                            <input type="checkbox" id="amenity-terrace">
+                            <label for="amenity-terrace">Terraza</label>
+                        </div>
+                        <div class="amenity-item">
+                            <input type="checkbox" id="amenity-breakfast">
+                            <label for="amenity-breakfast">Desayuno incluido</label>
+                        </div>
                     </div>
                     
+                    <h3>Fotos de la Propiedad</h3>
                     <div class="form-group">
-                        <label for="property-capacity">Capacidad (personas):</label>
-                        <input type="number" id="property-capacity" min="1" required>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="property-images">Fotos de la propiedad (Múltiples, max 1MB cada una):</label>
+                        <label for="property-images">Sube fotos de tu propiedad (Máx. 10 imágenes, 1MB cada una):</label>
                         <input type="file" id="property-images" multiple accept="image/*">
                         <div class="image-preview-container" id="image-preview"></div>
                     </div>
                     
+                    <h3>Normas del Alojamiento</h3>
+                    <div class="form-group">
+                        <label for="property-rules">Normas especiales (opcional):</label>
+                        <textarea id="property-rules" rows="3" placeholder="Ej: No se permiten fiestas, No mascotas, No fumar, etc."></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="property-checkin">Horario de check-in:</label>
+                        <input type="text" id="property-checkin" placeholder="Ej: 15:00 - 20:00">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="property-checkout">Horario de check-out:</label>
+                        <input type="text" id="property-checkout" placeholder="Ej: Antes de las 11:00">
+                    </div>
+                    
                     <button type="submit" id="publish-button">Publicar Propiedad</button>
                 </form>
+            </div>
+        </section>
+        
+        <!-- Perfil de Usuario -->
+        <section id="profile-section" class="hidden">
+            <h2 class="section-title">Mi Perfil</h2>
+            
+            <div class="profile-container">
+                <div class="profile-sidebar">
+                    <img src="https://ui-avatars.com/api/?name=${appState.currentUser?.name || 'Usuario'}&background=0056b3&color=fff" class="user-avatar" id="user-avatar">
+                    <h3 id="user-name">${appState.currentUser?.name || 'Usuario'}</h3>
+                    <p><strong>Teléfono:</strong> <span id="user-phone">${appState.currentUser?.phone || 'No registrado'}</span></p>
+                    <p><strong>Email:</strong> <span id="user-email">${appState.currentUser?.email || 'No registrado'}</span></p>
+                    <p><strong>Miembro desde:</strong> <span id="user-since">${appState.currentUser?.createdAt ? new Date(appState.currentUser.createdAt).toLocaleDateString() : 'No disponible'}</span></p>
+                    
+                    <button onclick="showSection('publish')" style="margin-top: 1rem;">Publicar Nueva Propiedad</button>
+                </div>
+                
+                <div class="profile-content">
+                    <div class="tab-container">
+                        <div class="tab-buttons">
+                            <button class="tab-button active" onclick="openProfileTab('properties')">Mis Propiedades</button>
+                            <button class="tab-button" onclick="openProfileTab('reservations')">Reservaciones</button>
+                            <button class="tab-button" onclick="openProfileTab('settings')">Configuración</button>
+                        </div>
+                        
+                        <div id="properties-tab" class="tab-content active">
+                            <h3>Mis Propiedades Publicadas</h3>
+                            <div class="user-properties" id="user-properties-list">
+                                <p>Cargando propiedades...</p>
+                            </div>
+                        </div>
+                        
+                        <div id="reservations-tab" class="tab-content">
+                            <h3>Reservaciones Recibidas</h3>
+                            <div class="reservations-list" id="reservations-list">
+                                <p>Cargando reservaciones...</p>
+                            </div>
+                        </div>
+                        
+                        <div id="settings-tab" class="tab-content">
+                            <h3>Configuración de Cuenta</h3>
+                            <form id="profile-form" class="form-container">
+                                <div class="form-group">
+                                    <label for="profile-name">Nombre completo:</label>
+                                    <input type="text" id="profile-name" value="${appState.currentUser?.name || ''}">
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="profile-phone">Teléfono / WhatsApp:</label>
+                                    <input type="tel" id="profile-phone" value="${appState.currentUser?.phone || ''}">
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="profile-email">Correo electrónico:</label>
+                                    <input type="email" id="profile-email" value="${appState.currentUser?.email || ''}" disabled>
+                                </div>
+                                
+                                <h4>Cambiar Contraseña</h4>
+                                <div class="form-group">
+                                    <label for="profile-current-password">Contraseña actual:</label>
+                                    <input type="password" id="profile-current-password">
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="profile-new-password">Nueva contraseña:</label>
+                                    <input type="password" id="profile-new-password">
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="profile-confirm-password">Confirmar nueva contraseña:</label>
+                                    <input type="password" id="profile-confirm-password">
+                                </div>
+                                
+                                <button type="submit" id="profile-save-button">Guardar Cambios</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
             </div>
         </section>
         
@@ -538,7 +882,8 @@
             isLoggedIn: false,
             currentUser: null,
             properties: [],
-            users: []
+            users: [],
+            reservations: []
         };
 
         // Referencia a la base de datos (simulada con localStorage)
@@ -557,6 +902,26 @@
                 async getById(id) {
                     const properties = await this.getAll();
                     return properties.find(p => p.id === id);
+                },
+                async getByOwner(ownerId) {
+                    const properties = await this.getAll();
+                    return properties.filter(p => p.ownerId === ownerId);
+                },
+                async update(property) {
+                    const properties = await this.getAll();
+                    const index = properties.findIndex(p => p.id === property.id);
+                    if (index !== -1) {
+                        properties[index] = property;
+                        localStorage.setItem('properties', JSON.stringify(properties));
+                        return true;
+                    }
+                    return false;
+                },
+                async delete(id) {
+                    const properties = await this.getAll();
+                    const filtered = properties.filter(p => p.id !== id);
+                    localStorage.setItem('properties', JSON.stringify(filtered));
+                    return true;
                 }
             },
             users: {
@@ -569,6 +934,46 @@
                     users.push(user);
                     localStorage.setItem('users', JSON.stringify(users));
                     return user;
+                },
+                async update(user) {
+                    const users = JSON.parse(localStorage.getItem('users')) || [];
+                    const index = users.findIndex(u => u.id === user.id);
+                    if (index !== -1) {
+                        users[index] = user;
+                        localStorage.setItem('users', JSON.stringify(users));
+                        return true;
+                    }
+                    return false;
+                }
+            },
+            reservations: {
+                async getAll() {
+                    return JSON.parse(localStorage.getItem('reservations')) || [];
+                },
+                async add(reservation) {
+                    const reservations = await this.getAll();
+                    reservation.id = reservation.id || Date.now();
+                    reservations.push(reservation);
+                    localStorage.setItem('reservations', JSON.stringify(reservations));
+                    return reservation;
+                },
+                async getByProperty(propertyId) {
+                    const reservations = await this.getAll();
+                    return reservations.filter(r => r.propertyId === propertyId);
+                },
+                async getByOwner(ownerId) {
+                    const reservations = await this.getAll();
+                    return reservations.filter(r => r.ownerId === ownerId);
+                },
+                async update(reservation) {
+                    const reservations = await this.getAll();
+                    const index = reservations.findIndex(r => r.id === reservation.id);
+                    if (index !== -1) {
+                        reservations[index] = reservation;
+                        localStorage.setItem('reservations', JSON.stringify(reservations));
+                        return true;
+                    }
+                    return false;
                 }
             }
         };
@@ -582,15 +987,18 @@
         function updateNav() {
             const registerItem = document.getElementById('register-nav-item');
             const loginItem = document.getElementById('login-nav-item');
+            const profileItem = document.getElementById('profile-nav-item');
             const logoutItem = document.getElementById('logout-nav-item');
             
             if (appState.isLoggedIn) {
                 registerItem.classList.add('hidden');
                 loginItem.classList.add('hidden');
+                profileItem.classList.remove('hidden');
                 logoutItem.classList.remove('hidden');
             } else {
                 registerItem.classList.remove('hidden');
                 loginItem.classList.remove('hidden');
+                profileItem.classList.add('hidden');
                 logoutItem.classList.add('hidden');
             }
         }
@@ -635,6 +1043,9 @@
                 document.getElementById('contact-section').classList.remove('hidden');
             } else if (sectionId === 'property-detail') {
                 document.getElementById('property-detail-section').classList.remove('hidden');
+            } else if (sectionId === 'profile') {
+                document.getElementById('profile-section').classList.remove('hidden');
+                loadUserProfile();
             }
         }
 
@@ -744,6 +1155,16 @@
                     galleryHTML += `</div>`;
                 }
                 
+                // Crear lista de comodidades
+                let amenitiesHTML = '';
+                if (property.amenities && property.amenities.length > 0) {
+                    amenitiesHTML = `<div class="amenities-container" style="grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));">`;
+                    property.amenities.forEach(amenity => {
+                        amenitiesHTML += `<div class="amenity-item"><span>✓</span> ${amenity}</div>`;
+                    });
+                    amenitiesHTML += `</div>`;
+                }
+                
                 detailContent.innerHTML = `
                     <h2>${property.title}</h2>
                     <img id="main-property-image" src="${property.images[0]}" class="property-detail-image" alt="Imagen principal de ${property.title}">
@@ -751,27 +1172,44 @@
                     
                     <div class="property-info">
                         <p><strong>Tipo:</strong> ${getPropertyTypeName(property.type)}</p>
+                        <p><strong>Operación:</strong> ${property.operation === 'rent' ? 'Arriendo' : 'Venta'}</p>
                         <p><strong>Ubicación:</strong> ${property.address}, ${getZoneName(property.zone)}</p>
                         <p><strong>Precio por noche:</strong> $${property.price.toLocaleString()} COP</p>
-                        <p><strong>Habitaciones:</strong> ${property.rooms}</p>
+                        <p><strong>Área construida:</strong> ${property.area || 'No especificado'} m²</p>
+                        <p><strong>Habitaciones:</strong> ${property.rooms || '0'}</p>
                         <p><strong>Baños:</strong> ${property.bathrooms}</p>
                         <p><strong>Capacidad:</strong> ${property.capacity} personas</p>
+                        <p><strong>Pisos:</strong> ${property.floors || '1'}</p>
+                        <p><strong>Parqueaderos:</strong> ${property.parking || '0'}</p>
                         <p><strong>Contacto:</strong> ${owner.name} - ${formatPhone(owner.phone)}</p>
                     </div>
                     
                     <h3>Descripción</h3>
                     <div class="property-description">${property.description}</div>
                     
+                    <h3>Comodidades</h3>
+                    ${amenitiesHTML || '<p>No se han especificado comodidades.</p>'}
+                    
+                    <h3>Normas del alojamiento</h3>
+                    <div class="property-description">${property.rules || 'No se han especificado normas especiales.'}</div>
+                    
+                    <div class="property-info">
+                        <p><strong>Check-in:</strong> ${property.checkin || 'No especificado'}</p>
+                        <p><strong>Check-out:</strong> ${property.checkout || 'No especificado'}</p>
+                    </div>
+                    
                     <h3>Reservar esta propiedad</h3>
                     <form id="reservation-form" class="reservation-form">
-                        <div class="form-group">
-                            <label for="reservation-checkin">Fecha de llegada:</label>
-                            <input type="date" id="reservation-checkin" required>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label for="reservation-checkout">Fecha de salida:</label>
-                            <input type="date" id="reservation-checkout" required>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="reservation-checkin">Fecha de llegada:</label>
+                                <input type="date" id="reservation-checkin" required>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="reservation-checkout">Fecha de salida:</label>
+                                <input type="date" id="reservation-checkout" required>
+                            </div>
                         </div>
                         
                         <div class="form-group">
@@ -779,14 +1217,16 @@
                             <input type="number" id="reservation-guests" min="1" max="${property.capacity}" required>
                         </div>
                         
-                        <div class="form-group">
-                            <label for="reservation-name">Nombre completo:</label>
-                            <input type="text" id="reservation-name" required>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label for="reservation-phone">Tu teléfono / WhatsApp:</label>
-                            <input type="tel" id="reservation-phone" required>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="reservation-name">Nombre completo:</label>
+                                <input type="text" id="reservation-name" required>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="reservation-phone">Tu teléfono / WhatsApp:</label>
+                                <input type="tel" id="reservation-phone" required>
+                            </div>
                         </div>
                         
                         <div class="form-group">
@@ -860,6 +1300,23 @@
                 
                 // Abrir WhatsApp con el mensaje
                 window.open(`https://wa.me/${owner.phone}?text=${whatsappMessage}`, '_blank');
+                
+                // Guardar la reserva en la base de datos
+                const newReservation = {
+                    propertyId: property.id,
+                    ownerId: property.ownerId,
+                    guestName: name,
+                    guestPhone: phone,
+                    guestEmail: email,
+                    checkin: checkin,
+                    checkout: checkout,
+                    guests: guests,
+                    message: message,
+                    status: 'pending',
+                    createdAt: new Date().toISOString()
+                };
+                
+                db.reservations.add(newReservation);
                 
                 alert('Se ha abierto WhatsApp con los datos de tu reserva. Por favor completa el proceso de reserva directamente con el propietario.');
             } catch (error) {
@@ -959,6 +1416,10 @@
                 
                 // Procesar imágenes si hay archivos seleccionados
                 if (imageFiles.length > 0) {
+                    if (imageFiles.length > 10) {
+                        throw new Error('Máximo 10 imágenes permitidas');
+                    }
+                    
                     for (let i = 0; i < imageFiles.length; i++) {
                         const file = imageFiles[i];
                         
@@ -992,33 +1453,47 @@
                     throw new Error('No se pudieron procesar las imágenes. Asegúrate de que son archivos de imagen válidos.');
                 }
                 
+                // Obtener comodidades seleccionadas
+                const amenities = [];
+                document.querySelectorAll('.amenities-container input[type="checkbox"]:checked').forEach(checkbox => {
+                    amenities.push(checkbox.nextElementSibling.textContent);
+                });
+                
                 // Crear objeto de propiedad
                 const newProperty = {
                     id: propertyId,
                     type: document.getElementById('property-type').value,
+                    operation: document.getElementById('property-operation').value,
                     title: document.getElementById('property-title').value,
                     description: document.getElementById('property-description').value,
                     address: document.getElementById('property-address').value,
                     zone: document.getElementById('property-zone').value,
                     price: parseInt(document.getElementById('property-price').value),
-                    rooms: parseInt(document.getElementById('property-rooms').value),
+                    area: document.getElementById('property-area').value ? parseInt(document.getElementById('property-area').value) : null,
+                    rooms: document.getElementById('property-rooms').value ? parseInt(document.getElementById('property-rooms').value) : 0,
                     bathrooms: parseInt(document.getElementById('property-bathrooms').value),
                     capacity: parseInt(document.getElementById('property-capacity').value),
+                    floors: parseInt(document.getElementById('property-floors').value),
+                    parking: parseInt(document.getElementById('property-parking').value),
                     phone: appState.currentUser.phone,
-                    amenities: [],
+                    ownerId: appState.currentUser.id,
+                    amenities: amenities,
                     images: imageUrls,
+                    rules: document.getElementById('property-rules').value,
+                    checkin: document.getElementById('property-checkin').value,
+                    checkout: document.getElementById('property-checkout').value,
                     createdAt: new Date().toISOString()
                 };
                 
                 // Validar datos requeridos
                 if (!newProperty.title || !newProperty.description || !newProperty.address || 
-                    isNaN(newProperty.price) || isNaN(newProperty.rooms) || 
-                    isNaN(newProperty.bathrooms) || isNaN(newProperty.capacity)) {
+                    isNaN(newProperty.price) || isNaN(newProperty.bathrooms) || 
+                    isNaN(newProperty.capacity)) {
                     throw new Error('Por favor completa todos los campos requeridos');
                 }
                 
-                if (newProperty.price <= 0 || newProperty.rooms <= 0 || 
-                    newProperty.bathrooms <= 0 || newProperty.capacity <= 0) {
+                if (newProperty.price <= 0 || newProperty.bathrooms <= 0 || 
+                    newProperty.capacity <= 0) {
                     throw new Error('Los valores numéricos deben ser mayores a cero');
                 }
                 
@@ -1030,7 +1505,7 @@
                 document.getElementById('image-preview').innerHTML = '';
                 
                 alert('Propiedad publicada con éxito. Los clientes podrán contactarte por WhatsApp para reservar.');
-                showSection('home');
+                showSection('profile');
             } catch (error) {
                 console.error('Error al publicar propiedad:', error);
                 alert(error.message || 'Error al publicar propiedad');
@@ -1048,8 +1523,14 @@
             const files = e.target.files;
             if (!files || files.length === 0) return;
             
-            for (let i = 0; i < files.length; i++) {
-                const file = files[i];
+            if (files.length > 10) {
+                alert('Máximo 10 imágenes permitidas. Se mostrarán las primeras 10.');
+            }
+            
+            const filesToShow = Array.from(files).slice(0, 10);
+            
+            for (let i = 0; i < filesToShow.length; i++) {
+                const file = filesToShow[i];
                 if (!file.type.match('image.*')) continue;
                 
                 const reader = new FileReader();
@@ -1065,12 +1546,220 @@
             }
         });
 
+        // Cargar perfil de usuario
+        async function loadUserProfile() {
+            if (!appState.isLoggedIn) return;
+            
+            // Actualizar información del usuario en el sidebar
+            document.getElementById('user-name').textContent = appState.currentUser.name;
+            document.getElementById('user-phone').textContent = appState.currentUser.phone;
+            document.getElementById('user-email').textContent = appState.currentUser.email;
+            document.getElementById('user-since').textContent = new Date(appState.currentUser.createdAt).toLocaleDateString();
+            
+            // Actualizar avatar
+            const avatar = document.getElementById('user-avatar');
+            avatar.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(appState.currentUser.name)}&background=0056b3&color=fff`;
+            
+            // Cargar propiedades del usuario
+            const propertiesList = document.getElementById('user-properties-list');
+            propertiesList.innerHTML = '<p>Cargando propiedades...</p>';
+            
+            try {
+                const properties = await db.properties.getByOwner(appState.currentUser.id);
+                
+                if (properties.length === 0) {
+                    propertiesList.innerHTML = '<p>No has publicado ninguna propiedad aún.</p>';
+                    return;
+                }
+                
+                propertiesList.innerHTML = '';
+                
+                properties.forEach(property => {
+                    propertiesList.innerHTML += `
+                        <div class="property-card">
+                            <img src="${property.images[0]}" alt="${property.title}">
+                            <h4>${property.title}</h4>
+                            <p>${property.rooms} habitaciones, ${property.bathrooms} baño(s)</p>
+                            <p><strong>$${property.price.toLocaleString()} / noche</strong></p>
+                            <p><strong>Estado:</strong> ${property.status || 'Activo'}</p>
+                            <div class="property-actions">
+                                <button class="edit-btn" onclick="editProperty(${property.id})">Editar</button>
+                                <button class="delete-btn" onclick="deleteProperty(${property.id})">Eliminar</button>
+                            </div>
+                        </div>
+                    `;
+                });
+            } catch (error) {
+                console.error('Error cargando propiedades del usuario:', error);
+                propertiesList.innerHTML = '<p class="error-message">Error cargando propiedades. Por favor intenta nuevamente.</p>';
+            }
+            
+            // Cargar reservaciones del usuario
+            const reservationsList = document.getElementById('reservations-list');
+            reservationsList.innerHTML = '<p>Cargando reservaciones...</p>';
+            
+            try {
+                const reservations = await db.reservations.getByOwner(appState.currentUser.id);
+                
+                if (reservations.length === 0) {
+                    reservationsList.innerHTML = '<p>No tienes reservaciones recibidas.</p>';
+                    return;
+                }
+                
+                reservationsList.innerHTML = '';
+                
+                // Obtener detalles de las propiedades
+                const properties = await db.properties.getAll();
+                
+                reservations.forEach(reservation => {
+                    const property = properties.find(p => p.id === reservation.propertyId);
+                    const propertyTitle = property ? property.title : 'Propiedad no encontrada';
+                    
+                    let statusClass = 'status-pending';
+                    if (reservation.status === 'confirmed') statusClass = 'status-confirmed';
+                    if (reservation.status === 'cancelled') statusClass = 'status-cancelled';
+                    
+                    reservationsList.innerHTML += `
+                        <div class="reservation-card">
+                            <h4>${propertyTitle}</h4>
+                            <p><strong>Huésped:</strong> ${reservation.guestName}</p>
+                            <p><strong>Teléfono:</strong> ${formatPhone(reservation.guestPhone)}</p>
+                            <p><strong>Email:</strong> ${reservation.guestEmail}</p>
+                            <p><strong>Fechas:</strong> ${formatDate(reservation.checkin)} - ${formatDate(reservation.checkout)}</p>
+                            <p><strong>Huéspedes:</strong> ${reservation.guests}</p>
+                            <p><strong>Estado:</strong> <span class="reservation-status ${statusClass}">${getReservationStatusName(reservation.status)}</span></p>
+                            <p><strong>Mensaje:</strong> ${reservation.message || 'Ninguno'}</p>
+                            <div style="margin-top: 1rem;">
+                                <button onclick="changeReservationStatus(${reservation.id}, 'confirmed')">Confirmar</button>
+                                <button onclick="changeReservationStatus(${reservation.id}, 'cancelled')" class="delete-btn" style="margin-left: 0.5rem;">Cancelar</button>
+                            </div>
+                        </div>
+                    `;
+                });
+            } catch (error) {
+                console.error('Error cargando reservaciones:', error);
+                reservationsList.innerHTML = '<p class="error-message">Error cargando reservaciones. Por favor intenta nuevamente.</p>';
+            }
+        }
+
+        // Editar propiedad
+        async function editProperty(propertyId) {
+            try {
+                const property = await db.properties.getById(propertyId);
+                if (!property) {
+                    throw new Error('Propiedad no encontrada');
+                }
+                
+                // Llenar formulario con datos de la propiedad
+                document.getElementById('property-type').value = property.type;
+                document.getElementById('property-operation').value = property.operation;
+                document.getElementById('property-title').value = property.title;
+                document.getElementById('property-description').value = property.description;
+                document.getElementById('property-address').value = property.address;
+                document.getElementById('property-zone').value = property.zone;
+                document.getElementById('property-price').value = property.price;
+                document.getElementById('property-area').value = property.area || '';
+                document.getElementById('property-rooms').value = property.rooms || '';
+                document.getElementById('property-bathrooms').value = property.bathrooms;
+                document.getElementById('property-capacity').value = property.capacity;
+                document.getElementById('property-floors').value = property.floors || 1;
+                document.getElementById('property-parking').value = property.parking || 0;
+                document.getElementById('property-rules').value = property.rules || '';
+                document.getElementById('property-checkin').value = property.checkin || '';
+                document.getElementById('property-checkout').value = property.checkout || '';
+                
+                // Marcar comodidades
+                document.querySelectorAll('.amenities-container input[type="checkbox"]').forEach(checkbox => {
+                    checkbox.checked = property.amenities.includes(checkbox.nextElementSibling.textContent);
+                });
+                
+                // Mostrar imágenes existentes
+                const previewContainer = document.getElementById('image-preview');
+                previewContainer.innerHTML = '';
+                
+                property.images.forEach(img => {
+                    const imgElement = document.createElement('img');
+                    imgElement.src = img;
+                    imgElement.classList.add('image-preview');
+                    previewContainer.appendChild(imgElement);
+                });
+                
+                // Cambiar texto del botón de publicación
+                document.getElementById('publish-button').textContent = 'Actualizar Propiedad';
+                
+                // Guardar ID de la propiedad para actualización
+                document.getElementById('publish-form').dataset.propertyId = propertyId;
+                
+                // Mostrar sección de publicación
+                showSection('publish');
+            } catch (error) {
+                console.error('Error editando propiedad:', error);
+                alert('Error al cargar la propiedad para edición');
+            }
+        }
+
+        // Eliminar propiedad
+        async function deleteProperty(propertyId) {
+            if (confirm('¿Estás seguro de que deseas eliminar esta propiedad? Esta acción no se puede deshacer.')) {
+                try {
+                    await db.properties.delete(propertyId);
+                    alert('Propiedad eliminada correctamente');
+                    loadUserProfile();
+                } catch (error) {
+                    console.error('Error eliminando propiedad:', error);
+                    alert('Error al eliminar la propiedad');
+                }
+            }
+        }
+
+        // Cambiar estado de reservación
+        async function changeReservationStatus(reservationId, status) {
+            try {
+                const reservations = await db.reservations.getAll();
+                const reservation = reservations.find(r => r.id === reservationId);
+                
+                if (!reservation) {
+                    throw new Error('Reservación no encontrada');
+                }
+                
+                reservation.status = status;
+                await db.reservations.update(reservation);
+                
+                alert(`Reservación ${getReservationStatusName(status)} correctamente`);
+                loadUserProfile();
+            } catch (error) {
+                console.error('Error cambiando estado de reservación:', error);
+                alert('Error al cambiar el estado de la reservación');
+            }
+        }
+
+        // Abrir pestaña en el perfil
+        function openProfileTab(tabId) {
+            // Ocultar todos los contenidos de pestañas
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Desactivar todos los botones de pestañas
+            document.querySelectorAll('.tab-button').forEach(button => {
+                button.classList.remove('active');
+            });
+            
+            // Activar la pestaña seleccionada
+            document.getElementById(`${tabId}-tab`).classList.add('active');
+            
+            // Activar el botón de la pestaña seleccionada
+            event.currentTarget.classList.add('active');
+        }
+
         // Funciones auxiliares
         function getPropertyTypeName(type) {
             const types = {
                 'apartment': 'Apartamento',
                 'house': 'Casa',
-                'room': 'Habitación'
+                'room': 'Habitación',
+                'hostel': 'Hostal',
+                'hotel': 'Hotel'
             };
             return types[type] || type;
         }
@@ -1080,9 +1769,23 @@
                 'bocagrande': 'Bocagrande',
                 'getsemani': 'Getsemaní',
                 'centro': 'Centro Histórico',
-                'manga': 'Manga'
+                'manga': 'Manga',
+                'castillogrande': 'Castillo Grande',
+                'laguito': 'El Laguito',
+                'bocachica': 'Boca Chica',
+                'lacrespa': 'La Crespa',
+                'marbella': 'Marbella'
             };
             return zones[zone] || zone;
+        }
+
+        function getReservationStatusName(status) {
+            const statuses = {
+                'pending': 'Pendiente',
+                'confirmed': 'Confirmada',
+                'cancelled': 'Cancelada'
+            };
+            return statuses[status] || status;
         }
 
         function formatPhone(phone) {
@@ -1092,6 +1795,7 @@
         }
 
         function formatDate(dateString) {
+            if (!dateString) return 'No especificada';
             const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
             return new Date(dateString).toLocaleDateString('es-ES', options);
         }
@@ -1161,7 +1865,7 @@
                 updateNav();
                 
                 alert('Registro exitoso. Ahora puedes publicar propiedades.');
-                showSection('home');
+                showSection('profile');
             } catch (error) {
                 console.error('Error en registro:', error);
                 
@@ -1227,7 +1931,7 @@
                 updateNav();
                 
                 alert('Inicio de sesión exitoso');
-                showSection('home');
+                showSection('profile');
             } catch (error) {
                 console.error('Error en inicio de sesión:', error);
                 
@@ -1254,6 +1958,100 @@
             } finally {
                 loginButton.disabled = false;
                 loginButton.textContent = originalText;
+            }
+        });
+
+        // Manejar actualización de perfil
+        document.getElementById('profile-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const saveButton = document.getElementById('profile-save-button');
+            const originalText = saveButton.textContent;
+            saveButton.disabled = true;
+            saveButton.innerHTML = '<span class="loading"></span> Guardando...';
+            
+            try {
+                const name = document.getElementById('profile-name').value.trim();
+                const phone = document.getElementById('profile-phone').value.trim();
+                const currentPassword = document.getElementById('profile-current-password').value;
+                const newPassword = document.getElementById('profile-new-password').value;
+                const confirmPassword = document.getElementById('profile-confirm-password').value;
+                
+                // Validaciones
+                if (!name || !phone) {
+                    throw new Error('Por favor completa todos los campos requeridos');
+                }
+                
+                if (!phone.match(/^[0-9]{10,15}$/)) {
+                    throw new Error('Por favor ingresa un número de teléfono válido (10-15 dígitos)');
+                }
+                
+                // Actualizar información del usuario
+                const updatedUser = {
+                    ...appState.currentUser,
+                    name,
+                    phone
+                };
+                
+                await db.users.update(updatedUser);
+                
+                // Actualizar contraseña si se proporcionó
+                if (currentPassword || newPassword || confirmPassword) {
+                    if (!currentPassword || !newPassword || !confirmPassword) {
+                        throw new Error('Por favor completa todos los campos de contraseña');
+                    }
+                    
+                    if (newPassword !== confirmPassword) {
+                        throw new Error('Las nuevas contraseñas no coinciden');
+                    }
+                    
+                    if (newPassword.length < 6) {
+                        throw new Error('La nueva contraseña debe tener al menos 6 caracteres');
+                    }
+                    
+                    // Reautenticar al usuario
+                    const credential = firebase.auth.EmailAuthProvider.credential(
+                        appState.currentUser.email, 
+                        currentPassword
+                    );
+                    
+                    await auth.currentUser.reauthenticateWithCredential(credential);
+                    
+                    // Actualizar contraseña
+                    await auth.currentUser.updatePassword(newPassword);
+                }
+                
+                // Actualizar estado de la aplicación
+                appState.currentUser = updatedUser;
+                saveState();
+                
+                // Actualizar vista de perfil
+                loadUserProfile();
+                
+                alert('Perfil actualizado correctamente');
+            } catch (error) {
+                console.error('Error actualizando perfil:', error);
+                
+                let errorMessage = 'Error actualizando perfil';
+                if (error.code) {
+                    switch (error.code) {
+                        case 'auth/wrong-password':
+                            errorMessage = 'Contraseña actual incorrecta';
+                            break;
+                        case 'auth/weak-password':
+                            errorMessage = 'La nueva contraseña debe tener al menos 6 caracteres';
+                            break;
+                        default:
+                            errorMessage = error.message || errorMessage;
+                    }
+                } else {
+                    errorMessage = error.message || errorMessage;
+                }
+                
+                alert(errorMessage);
+            } finally {
+                saveButton.disabled = false;
+                saveButton.textContent = originalText;
             }
         });
 

@@ -1,0 +1,1310 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hospedajes Cartagena</title>
+    <!-- Agregar los SDK de Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-storage-compat.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            color: #333;
+            background-color: #f5f5f5;
+        }
+        
+        header {
+            background: #0056b3;
+            color: white;
+            padding: 1rem;
+            text-align: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        nav {
+            background: #333;
+            padding: 0.5rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        
+        nav ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
+        nav ul li {
+            margin: 0 1rem;
+        }
+        
+        nav ul li a {
+            color: white;
+            text-decoration: none;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            transition: background-color 0.3s;
+        }
+        
+        nav ul li a:hover {
+            background-color: #555;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 1rem;
+            background-color: white;
+            min-height: calc(100vh - 200px);
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        
+        .property-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-top: 1.5rem;
+        }
+        
+        .property-card {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 1rem;
+            transition: transform 0.3s, box-shadow 0.3s;
+            background-color: white;
+        }
+        
+        .property-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .property-card img {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            border-radius: 5px;
+        }
+        
+        .form-container {
+            max-width: 600px;
+            margin: 2rem auto;
+            padding: 1.5rem;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background-color: white;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        
+        .form-group {
+            margin-bottom: 1.2rem;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: bold;
+            color: #555;
+        }
+        
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 0.7rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 1rem;
+        }
+        
+        .form-group textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+        
+        button {
+            background: #0056b3;
+            color: white;
+            border: none;
+            padding: 0.8rem 1.5rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background-color 0.3s;
+        }
+        
+        button:hover {
+            background: #003d7a;
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        footer {
+            background: #333;
+            color: white;
+            text-align: center;
+            padding: 1.5rem;
+            margin-top: 2rem;
+        }
+
+        .image-preview-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .image-preview {
+            width: 100px;
+            height: 100px;
+            object-fit: cover;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        .logout-btn {
+            background: #dc3545;
+        }
+
+        .logout-btn:hover {
+            background: #c82333;
+        }
+
+        .property-detail-image {
+            width: 100%;
+            max-height: 400px;
+            object-fit: cover;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .property-gallery {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 1.5rem;
+        }
+
+        .property-gallery img {
+            width: 100px;
+            height: 100px;
+            object-fit: cover;
+            cursor: pointer;
+            border: 2px solid transparent;
+            border-radius: 4px;
+            transition: border-color 0.3s;
+        }
+
+        .property-gallery img:hover {
+            border-color: #0056b3;
+        }
+
+        .property-description {
+            white-space: pre-line;
+            margin-bottom: 1.5rem;
+            line-height: 1.6;
+            padding: 1rem;
+            background: #f9f9f9;
+            border-radius: 5px;
+            border-left: 4px solid #0056b3;
+        }
+
+        .property-info {
+            background: #f0f8ff;
+            padding: 1.2rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+            border-left: 4px solid #0056b3;
+        }
+
+        .property-info p {
+            margin: 0.7rem 0;
+            display: flex;
+        }
+
+        .property-info p strong {
+            display: inline-block;
+            width: 120px;
+            color: #555;
+        }
+
+        .reservation-form {
+            background: #f5f5f5;
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin-top: 2rem;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+            vertical-align: middle;
+            margin-right: 8px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .error-message {
+            color: #dc3545;
+            margin-top: 5px;
+            font-size: 0.9em;
+        }
+
+        .back-button {
+            margin-bottom: 1.5rem;
+            background: #6c757d;
+        }
+
+        .back-button:hover {
+            background: #5a6268;
+        }
+
+        .section-title {
+            color: #0056b3;
+            border-bottom: 2px solid #0056b3;
+            padding-bottom: 0.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .property-card h4 {
+            margin: 0.8rem 0;
+            color: #0056b3;
+        }
+
+        .property-card p {
+            margin: 0.5rem 0;
+            color: #555;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Hospedajes Cartagena</h1>
+        <p>Encuentra tu alojamiento perfecto</p>
+    </header>
+    
+    <nav>
+        <ul id="nav-menu">
+            <li><a href="#" onclick="showSection('home')">Inicio</a></li>
+            <li><a href="#" onclick="showSection('properties')">Propiedades</a></li>
+            <li><a href="#" onclick="showSection('publish')">Publicar</a></li>
+            <li id="register-nav-item"><a href="#" onclick="showSection('register')">Registrarse</a></li>
+            <li id="login-nav-item"><a href="#" onclick="showSection('login')">Iniciar Sesión</a></li>
+            <li id="logout-nav-item" class="hidden"><a href="#" onclick="logout()" class="logout-btn">Cerrar Sesión</a></li>
+            <li><a href="#" onclick="showSection('contact')">Contacto</a></li>
+        </ul>
+    </nav>
+    
+    <div class="container">
+        <!-- Sección de Inicio -->
+        <section id="home-section">
+            <h2 class="section-title">Bienvenido a Hospedajes Cartagena</h2>
+            <p>Encuentra las mejores opciones de alojamiento en la hermosa Cartagena de Indias.</p>
+            
+            <h3>Propiedades destacadas</h3>
+            <div class="property-list" id="featured-properties">
+                <!-- Las propiedades destacadas se cargarán dinámicamente -->
+                <p>Cargando propiedades destacadas...</p>
+            </div>
+        </section>
+        
+        <!-- Sección de Propiedades -->
+        <section id="properties-section" class="hidden">
+            <h2 class="section-title">Todas las Propiedades</h2>
+            <div class="property-list" id="all-properties">
+                <!-- Todas las propiedades se cargarán dinámicamente -->
+                <p>Cargando propiedades...</p>
+            </div>
+        </section>
+        
+        <!-- Detalle de Propiedad -->
+        <section id="property-detail-section" class="hidden">
+            <button class="back-button" onclick="showSection('properties')">← Volver a propiedades</button>
+            <div id="property-detail-content">
+                <!-- Contenido dinámico -->
+            </div>
+        </section>
+        
+        <!-- Publicar Propiedad -->
+        <section id="publish-section" class="hidden">
+            <h2 class="section-title">Publicar tu Propiedad</h2>
+            <div id="publish-login-message" class="hidden">
+                <p>Debes iniciar sesión para publicar una propiedad.</p>
+                <button onclick="showSection('login')">Iniciar Sesión</button>
+            </div>
+            
+            <div id="publish-form-container" class="hidden">
+                <form id="publish-form" class="form-container">
+                    <h3>Información de la Propiedad</h3>
+                    
+                    <div class="form-group">
+                        <label for="property-type">Tipo de propiedad:</label>
+                        <select id="property-type" required>
+                            <option value="">Seleccione...</option>
+                            <option value="apartment">Apartamento</option>
+                            <option value="house">Casa</option>
+                            <option value="room">Habitación</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="property-title">Título del anuncio:</label>
+                        <input type="text" id="property-title" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="property-description">Descripción:</label>
+                        <textarea id="property-description" rows="6" required></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="property-address">Dirección:</label>
+                        <input type="text" id="property-address" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="property-zone">Zona:</label>
+                        <select id="property-zone" required>
+                            <option value="">Seleccione...</option>
+                            <option value="bocagrande">Bocagrande</option>
+                            <option value="getsemani">Getsemaní</option>
+                            <option value="centro">Centro Histórico</option>
+                            <option value="manga">Manga</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="property-price">Precio por noche (COP):</label>
+                        <input type="number" id="property-price" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="property-rooms">Habitaciones:</label>
+                        <input type="number" id="property-rooms" min="1" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="property-bathrooms">Baños:</label>
+                        <input type="number" id="property-bathrooms" min="1" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="property-capacity">Capacidad (personas):</label>
+                        <input type="number" id="property-capacity" min="1" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="property-images">Fotos de la propiedad (Múltiples):</label>
+                        <input type="file" id="property-images" multiple accept="image/*">
+                        <div class="image-preview-container" id="image-preview"></div>
+                    </div>
+                    
+                    <button type="submit" id="publish-button">Publicar Propiedad</button>
+                </form>
+            </div>
+        </section>
+        
+        <!-- Registro de Usuario -->
+        <section id="register-section" class="hidden">
+            <h2 class="section-title">Registro de Usuario</h2>
+            <form id="register-form" class="form-container">
+                <div class="form-group">
+                    <label for="register-name">Nombre completo:</label>
+                    <input type="text" id="register-name" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="register-phone">Teléfono / WhatsApp (para reservas):</label>
+                    <input type="tel" id="register-phone" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="register-email">Correo electrónico:</label>
+                    <input type="email" id="register-email" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="register-password">Contraseña (mínimo 6 caracteres):</label>
+                    <input type="password" id="register-password" required minlength="6">
+                </div>
+                
+                <div class="form-group">
+                    <label for="register-confirm">Confirmar contraseña:</label>
+                    <input type="password" id="register-confirm" required>
+                </div>
+                
+                <button type="submit" id="register-button">Registrarse</button>
+                <p>¿Ya tienes cuenta? <a href="#" onclick="showSection('login')">Inicia sesión</a></p>
+            </form>
+        </section>
+        
+        <!-- Inicio de Sesión -->
+        <section id="login-section" class="hidden">
+            <h2 class="section-title">Iniciar Sesión</h2>
+            <form id="login-form" class="form-container">
+                <div class="form-group">
+                    <label for="login-email">Correo electrónico:</label>
+                    <input type="email" id="login-email" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="login-password">Contraseña:</label>
+                    <input type="password" id="login-password" required>
+                </div>
+                
+                <button type="submit" id="login-button">Iniciar Sesión</button>
+                <p>¿No tienes cuenta? <a href="#" onclick="showSection('register')">Regístrate</a></p>
+            </form>
+        </section>
+        
+        <!-- Contacto -->
+        <section id="contact-section" class="hidden">
+            <h2 class="section-title">Contacto</h2>
+            <form id="contact-form" class="form-container">
+                <div class="form-group">
+                    <label for="contact-name">Nombre:</label>
+                    <input type="text" id="contact-name" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="contact-email">Correo electrónico:</label>
+                    <input type="email" id="contact-email" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="contact-phone">Teléfono:</label>
+                    <input type="tel" id="contact-phone">
+                </div>
+                
+                <div class="form-group">
+                    <label for="contact-subject">Asunto:</label>
+                    <select id="contact-subject" required>
+                        <option value="">Seleccione...</option>
+                        <option value="question">Consulta</option>
+                        <option value="problem">Problema con reserva</option>
+                        <option value="other">Otro</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="contact-message">Mensaje:</label>
+                    <textarea id="contact-message" rows="4" required></textarea>
+                </div>
+                
+                <button type="submit">Enviar Mensaje</button>
+            </form>
+        </section>
+    </div>
+    
+    <footer>
+        <p>Hospedajes Cartagena &copy; 2023 - Todos los derechos reservados</p>
+    </footer>
+    
+    <script>
+        // Configuración de Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyDm4482FNu-9yMpbdbp4z2Rldy5sPlZjq8",
+            authDomain: "kursana-71cc3.firebaseapp.com",
+            projectId: "kursana-71cc3",
+            storageBucket: "kursana-71cc3.appspot.com",
+            messagingSenderId: "74043290336",
+            appId: "1:74043290336:web:feb3bfda3ea6867d531685",
+            measurementId: "G-YMXCY3VB54"
+        };
+
+        // Inicializar Firebase
+        const app = firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const storage = firebase.storage();
+
+        // Estado de la aplicación
+        const appState = {
+            isLoggedIn: false,
+            currentUser: null,
+            properties: [],
+            users: []
+        };
+
+        // Referencia a la base de datos (simulada con localStorage)
+        const db = {
+            properties: {
+                async getAll() {
+                    return JSON.parse(localStorage.getItem('properties')) || [];
+                },
+                async add(property) {
+                    const properties = await this.getAll();
+                    property.id = property.id || Date.now();
+                    properties.push(property);
+                    localStorage.setItem('properties', JSON.stringify(properties));
+                    return property;
+                },
+                async getById(id) {
+                    const properties = await this.getAll();
+                    return properties.find(p => p.id === id);
+                }
+            },
+            users: {
+                async getByEmail(email) {
+                    const users = JSON.parse(localStorage.getItem('users')) || [];
+                    return users.find(u => u.email === email);
+                },
+                async add(user) {
+                    const users = JSON.parse(localStorage.getItem('users')) || [];
+                    users.push(user);
+                    localStorage.setItem('users', JSON.stringify(users));
+                    return user;
+                }
+            }
+        };
+
+        // Función para guardar el estado en localStorage
+        function saveState() {
+            localStorage.setItem('currentUser', JSON.stringify(appState.currentUser));
+        }
+
+        // Actualizar navegación según estado de login
+        function updateNav() {
+            const registerItem = document.getElementById('register-nav-item');
+            const loginItem = document.getElementById('login-nav-item');
+            const logoutItem = document.getElementById('logout-nav-item');
+            
+            if (appState.isLoggedIn) {
+                registerItem.classList.add('hidden');
+                loginItem.classList.add('hidden');
+                logoutItem.classList.remove('hidden');
+            } else {
+                registerItem.classList.remove('hidden');
+                loginItem.classList.remove('hidden');
+                logoutItem.classList.add('hidden');
+            }
+        }
+
+        // Cerrar sesión
+        function logout() {
+            auth.signOut().then(() => {
+                appState.isLoggedIn = false;
+                appState.currentUser = null;
+                saveState();
+                updateNav();
+                showSection('home');
+                alert('Has cerrado sesión correctamente');
+            }).catch(error => {
+                console.error('Error al cerrar sesión:', error);
+                alert('Ocurrió un error al cerrar sesión');
+            });
+        }
+
+        // Mostrar sección específica
+        function showSection(sectionId) {
+            // Ocultar todas las secciones
+            document.querySelectorAll('section').forEach(section => {
+                section.classList.add('hidden');
+            });
+            
+            // Mostrar la sección solicitada
+            if (sectionId === 'home') {
+                document.getElementById('home-section').classList.remove('hidden');
+                loadFeaturedProperties();
+            } else if (sectionId === 'properties') {
+                document.getElementById('properties-section').classList.remove('hidden');
+                loadAllProperties();
+            } else if (sectionId === 'publish') {
+                document.getElementById('publish-section').classList.remove('hidden');
+                updatePublishSection();
+            } else if (sectionId === 'register') {
+                document.getElementById('register-section').classList.remove('hidden');
+            } else if (sectionId === 'login') {
+                document.getElementById('login-section').classList.remove('hidden');
+            } else if (sectionId === 'contact') {
+                document.getElementById('contact-section').classList.remove('hidden');
+            } else if (sectionId === 'property-detail') {
+                document.getElementById('property-detail-section').classList.remove('hidden');
+            }
+        }
+
+        // Cargar propiedades destacadas
+        async function loadFeaturedProperties() {
+            const featuredContainer = document.getElementById('featured-properties');
+            featuredContainer.innerHTML = '<p>Cargando propiedades destacadas...</p>';
+            
+            try {
+                const properties = await db.properties.getAll();
+                
+                if (properties.length === 0) {
+                    featuredContainer.innerHTML = '<p>No hay propiedades destacadas disponibles.</p>';
+                    return;
+                }
+                
+                featuredContainer.innerHTML = '';
+                
+                // Mostrar las primeras 3 propiedades como destacadas
+                properties.slice(0, 3).forEach(property => {
+                    featuredContainer.innerHTML += `
+                        <div class="property-card">
+                            <img src="${property.images[0]}" alt="${property.title}">
+                            <h4>${property.title}</h4>
+                            <p>${property.rooms} habitaciones, ${property.bathrooms} baño(s)</p>
+                            <p><strong>$${property.price.toLocaleString()} / noche</strong></p>
+                            <button onclick="showPropertyDetail(${property.id})">Ver detalles</button>
+                        </div>
+                    `;
+                });
+            } catch (error) {
+                console.error('Error cargando propiedades destacadas:', error);
+                featuredContainer.innerHTML = '<p class="error-message">Error cargando propiedades. Por favor intenta nuevamente.</p>';
+            }
+        }
+
+        // Cargar todas las propiedades
+        async function loadAllProperties() {
+            const allContainer = document.getElementById('all-properties');
+            allContainer.innerHTML = '<p>Cargando propiedades...</p>';
+            
+            try {
+                const properties = await db.properties.getAll();
+                
+                if (properties.length === 0) {
+                    allContainer.innerHTML = '<p>No hay propiedades disponibles.</p>';
+                    return;
+                }
+                
+                allContainer.innerHTML = '';
+                
+                properties.forEach(property => {
+                    allContainer.innerHTML += `
+                        <div class="property-card">
+                            <img src="${property.images[0]}" alt="${property.title}">
+                            <h4>${property.title}</h4>
+                            <p>${property.rooms} habitaciones, ${property.bathrooms} baño(s)</p>
+                            <p><strong>$${property.price.toLocaleString()} / noche</strong></p>
+                            <button onclick="showPropertyDetail(${property.id})">Ver detalles</button>
+                        </div>
+                    `;
+                });
+            } catch (error) {
+                console.error('Error cargando propiedades:', error);
+                allContainer.innerHTML = '<p class="error-message">Error cargando propiedades. Por favor intenta nuevamente.</p>';
+            }
+        }
+
+        // Actualizar sección de publicación según estado de login
+        function updatePublishSection() {
+            const loginMsg = document.getElementById('publish-login-message');
+            const formContainer = document.getElementById('publish-form-container');
+            
+            if (appState.isLoggedIn) {
+                loginMsg.classList.add('hidden');
+                formContainer.classList.remove('hidden');
+            } else {
+                loginMsg.classList.remove('hidden');
+                formContainer.classList.add('hidden');
+            }
+        }
+
+        // Mostrar detalle de propiedad
+        async function showPropertyDetail(propertyId) {
+            try {
+                const property = await db.properties.getById(propertyId);
+                if (!property) {
+                    throw new Error('Propiedad no encontrada');
+                }
+                
+                // Buscar al dueño de la propiedad
+                const users = JSON.parse(localStorage.getItem('users')) || [];
+                const owner = users.find(u => u.phone === property.phone) || { 
+                    name: "Anfitrión", 
+                    phone: property.phone 
+                };
+                
+                const detailContent = document.getElementById('property-detail-content');
+                
+                // Crear galería de imágenes
+                let galleryHTML = '';
+                if (property.images.length > 1) {
+                    galleryHTML = `<div class="property-gallery">`;
+                    property.images.forEach((img, index) => {
+                        galleryHTML += `<img src="${img}" onclick="changeMainImage(this, 'main-property-image')" alt="Imagen ${index + 1}">`;
+                    });
+                    galleryHTML += `</div>`;
+                }
+                
+                detailContent.innerHTML = `
+                    <h2>${property.title}</h2>
+                    <img id="main-property-image" src="${property.images[0]}" class="property-detail-image" alt="Imagen principal de ${property.title}">
+                    ${galleryHTML}
+                    
+                    <div class="property-info">
+                        <p><strong>Tipo:</strong> ${getPropertyTypeName(property.type)}</p>
+                        <p><strong>Ubicación:</strong> ${property.address}, ${getZoneName(property.zone)}</p>
+                        <p><strong>Precio por noche:</strong> $${property.price.toLocaleString()} COP</p>
+                        <p><strong>Habitaciones:</strong> ${property.rooms}</p>
+                        <p><strong>Baños:</strong> ${property.bathrooms}</p>
+                        <p><strong>Capacidad:</strong> ${property.capacity} personas</p>
+                        <p><strong>Contacto:</strong> ${owner.name} - ${formatPhone(owner.phone)}</p>
+                    </div>
+                    
+                    <h3>Descripción</h3>
+                    <div class="property-description">${property.description}</div>
+                    
+                    <h3>Reservar esta propiedad</h3>
+                    <form id="reservation-form" class="reservation-form">
+                        <div class="form-group">
+                            <label for="reservation-checkin">Fecha de llegada:</label>
+                            <input type="date" id="reservation-checkin" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="reservation-checkout">Fecha de salida:</label>
+                            <input type="date" id="reservation-checkout" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="reservation-guests">Huéspedes (máx. ${property.capacity}):</label>
+                            <input type="number" id="reservation-guests" min="1" max="${property.capacity}" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="reservation-name">Nombre completo:</label>
+                            <input type="text" id="reservation-name" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="reservation-phone">Tu teléfono / WhatsApp:</label>
+                            <input type="tel" id="reservation-phone" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="reservation-email">Tu correo electrónico:</label>
+                            <input type="email" id="reservation-email" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="reservation-message">Mensaje adicional (opcional):</label>
+                            <textarea id="reservation-message" rows="3"></textarea>
+                        </div>
+                        
+                        <button type="submit">Enviar Solicitud de Reserva</button>
+                    </form>
+                `;
+                
+                // Configurar el formulario de reserva
+                document.getElementById('reservation-form').addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    sendReservation(property, owner);
+                });
+                
+                // Mostrar la sección de detalle
+                showSection('property-detail');
+            } catch (error) {
+                console.error('Error mostrando detalle de propiedad:', error);
+                alert('Error al cargar los detalles de la propiedad');
+                showSection('properties');
+            }
+        }
+
+        // Función para cambiar la imagen principal en la galería
+        function changeMainImage(imgElement, mainImageId) {
+            const mainImg = document.getElementById(mainImageId);
+            mainImg.src = imgElement.src;
+        }
+
+        // Función para enviar reserva por WhatsApp
+        function sendReservation(property, owner) {
+            try {
+                const checkin = document.getElementById('reservation-checkin').value;
+                const checkout = document.getElementById('reservation-checkout').value;
+                const guests = document.getElementById('reservation-guests').value;
+                const name = document.getElementById('reservation-name').value;
+                const phone = document.getElementById('reservation-phone').value;
+                const email = document.getElementById('reservation-email').value;
+                const message = document.getElementById('reservation-message').value;
+                
+                // Validar fechas
+                if (!checkin || !checkout) {
+                    throw new Error('Por favor selecciona las fechas de tu estadía');
+                }
+                
+                // Calcular noches y total
+                const date1 = new Date(checkin);
+                const date2 = new Date(checkout);
+                
+                if (date2 <= date1) {
+                    throw new Error('La fecha de salida debe ser posterior a la fecha de llegada');
+                }
+                
+                const nights = Math.ceil((date2 - date1) / (1000 * 60 * 60 * 24));
+                const total = nights * property.price;
+                
+                // Formatear fechas
+                const formattedCheckin = formatDate(checkin);
+                const formattedCheckout = formatDate(checkout);
+                
+                // Crear mensaje para WhatsApp
+                const whatsappMessage = `¡Nueva solicitud de reserva!%0A%0A*🏠 Propiedad:* ${property.title}%0A*📍 Ubicación:* ${property.address}%0A*💰 Precio por noche:* $${property.price.toLocaleString()} COP%0A%0A*📅 Fechas de reserva:*%0A- Llegada: ${formattedCheckin}%0A- Salida: ${formattedCheckout}%0A- Noches: ${nights}%0A*👥 Huéspedes:* ${guests}%0A*💵 Total estimado:* $${total.toLocaleString()} COP%0A%0A*📌 Datos del huésped:*%0A- 👤 Nombre: ${name}%0A- 📞 Teléfono: ${phone}%0A- 📧 Email: ${email}%0A%0A*✉️ Mensaje adicional:*%0A${message || 'Ninguno'}%0A%0A¿Está disponible para estas fechas?`;
+                
+                // Abrir WhatsApp con el mensaje
+                window.open(`https://wa.me/${owner.phone}?text=${whatsappMessage}`, '_blank');
+                
+                alert('Se ha abierto WhatsApp con los datos de tu reserva. Por favor completa el proceso de reserva directamente con el propietario.');
+            } catch (error) {
+                alert(error.message);
+            }
+        }
+
+        // Subir imágenes a Firebase Storage con manejo mejorado
+        async function uploadImages(files, propertyId) {
+            const uploadPromises = [];
+            const imageUrls = [];
+            
+            if (!files || files.length === 0) {
+                throw new Error('No se han seleccionado imágenes para subir');
+            }
+            
+            // Verificar autenticación
+            if (!appState.isLoggedIn) {
+                throw new Error('Debes iniciar sesión para subir imágenes');
+            }
+            
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                
+                // Validar que sea una imagen
+                if (!file.type.match('image.*')) {
+                    console.warn(`El archivo ${file.name} no es una imagen y será omitido`);
+                    continue;
+                }
+                
+                // Generar un nombre de archivo seguro
+                const fileExtension = file.name.split('.').pop();
+                const safeFileName = `img_${Date.now()}_${i}.${fileExtension}`;
+                const storagePath = `properties/${propertyId}/${safeFileName}`;
+                const storageRef = storage.ref(storagePath);
+                
+                try {
+                    const uploadTask = storageRef.put(file);
+                    
+                    const downloadURL = await new Promise((resolve, reject) => {
+                        uploadTask.on(
+                            'state_changed',
+                            (snapshot) => {
+                                // Opcional: Mostrar progreso
+                                const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                                console.log(`Subiendo imagen: ${progress.toFixed(0)}%`);
+                            },
+                            (error) => {
+                                console.error('Error subiendo imagen:', error);
+                                reject(error);
+                            },
+                            async () => {
+                                try {
+                                    const url = await uploadTask.snapshot.ref.getDownloadURL();
+                                    resolve(url);
+                                } catch (error) {
+                                    console.error('Error obteniendo URL:', error);
+                                    reject(error);
+                                }
+                            }
+                        );
+                    });
+                    
+                    imageUrls.push(downloadURL);
+                } catch (error) {
+                    console.error(`Error subiendo imagen ${file.name}:`, error);
+                    throw new Error(`Error al subir la imagen ${file.name}: ${error.message}`);
+                }
+            }
+            
+            if (imageUrls.length === 0) {
+                throw new Error('No se pudieron subir las imágenes. Asegúrate de que son archivos de imagen válidos.');
+            }
+            
+            return imageUrls;
+        }
+
+        // Manejar publicación de propiedad
+        document.getElementById('publish-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const publishButton = document.getElementById('publish-button');
+            const originalText = publishButton.textContent;
+            publishButton.disabled = true;
+            publishButton.innerHTML = '<span class="loading"></span> Publicando...';
+            
+            try {
+                // Verificar autenticación
+                if (!appState.isLoggedIn) {
+                    throw new Error('Debes iniciar sesión para publicar propiedades');
+                }
+                
+                const propertyId = Date.now();
+                const imageFiles = document.getElementById('property-images').files;
+                let imageUrls = [];
+                
+                // Subir imágenes si hay archivos seleccionados
+                if (imageFiles.length > 0) {
+                    imageUrls = await uploadImages(imageFiles, propertyId);
+                } else {
+                    // Usar imagen por defecto si no se subieron imágenes
+                    imageUrls = ["https://images.unsplash.com/photo-1560448204-603b3fc33ddc?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80"];
+                }
+                
+                // Crear objeto de propiedad
+                const newProperty = {
+                    id: propertyId,
+                    type: document.getElementById('property-type').value,
+                    title: document.getElementById('property-title').value,
+                    description: document.getElementById('property-description').value,
+                    address: document.getElementById('property-address').value,
+                    zone: document.getElementById('property-zone').value,
+                    price: parseInt(document.getElementById('property-price').value),
+                    rooms: parseInt(document.getElementById('property-rooms').value),
+                    bathrooms: parseInt(document.getElementById('property-bathrooms').value),
+                    capacity: parseInt(document.getElementById('property-capacity').value),
+                    phone: appState.currentUser.phone,
+                    amenities: [],
+                    images: imageUrls,
+                    createdAt: new Date().toISOString()
+                };
+                
+                // Validar datos requeridos
+                if (!newProperty.title || !newProperty.description || !newProperty.address || 
+                    isNaN(newProperty.price) || isNaN(newProperty.rooms) || 
+                    isNaN(newProperty.bathrooms) || isNaN(newProperty.capacity)) {
+                    throw new Error('Por favor completa todos los campos requeridos');
+                }
+                
+                if (newProperty.price <= 0 || newProperty.rooms <= 0 || 
+                    newProperty.bathrooms <= 0 || newProperty.capacity <= 0) {
+                    throw new Error('Los valores numéricos deben ser mayores a cero');
+                }
+                
+                // Agregar a la lista de propiedades
+                await db.properties.add(newProperty);
+                
+                // Limpiar formulario
+                document.getElementById('publish-form').reset();
+                document.getElementById('image-preview').innerHTML = '';
+                
+                alert('Propiedad publicada con éxito. Los clientes podrán contactarte por WhatsApp para reservar.');
+                showSection('home');
+            } catch (error) {
+                console.error('Error al publicar propiedad:', error);
+                
+                let errorMessage = 'Error al publicar propiedad';
+                if (error.code) {
+                    switch (error.code) {
+                        case 'storage/unauthorized':
+                            errorMessage = 'No tienes permiso para subir archivos';
+                            break;
+                        case 'storage/canceled':
+                            errorMessage = 'Subida cancelada';
+                            break;
+                        case 'storage/unknown':
+                            errorMessage = 'Error desconocido en el almacenamiento';
+                            break;
+                        default:
+                            errorMessage = error.message || errorMessage;
+                    }
+                } else {
+                    errorMessage = error.message || errorMessage;
+                }
+                
+                alert(errorMessage);
+            } finally {
+                publishButton.disabled = false;
+                publishButton.textContent = originalText;
+            }
+        });
+
+        // Manejar subida de imágenes (previsualización)
+        document.getElementById('property-images').addEventListener('change', function(e) {
+            const previewContainer = document.getElementById('image-preview');
+            previewContainer.innerHTML = '';
+            
+            const files = e.target.files;
+            if (!files || files.length === 0) return;
+            
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                if (!file.type.match('image.*')) continue;
+                
+                const reader = new FileReader();
+                
+                reader.onload = function(e) {
+                    const img = document.createElement('img');
+                    img.src = e.target.result;
+                    img.classList.add('image-preview');
+                    previewContainer.appendChild(img);
+                }
+                
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // Funciones auxiliares
+        function getPropertyTypeName(type) {
+            const types = {
+                'apartment': 'Apartamento',
+                'house': 'Casa',
+                'room': 'Habitación'
+            };
+            return types[type] || type;
+        }
+
+        function getZoneName(zone) {
+            const zones = {
+                'bocagrande': 'Bocagrande',
+                'getsemani': 'Getsemaní',
+                'centro': 'Centro Histórico',
+                'manga': 'Manga'
+            };
+            return zones[zone] || zone;
+        }
+
+        function formatPhone(phone) {
+            if (!phone) return 'No disponible';
+            const cleaned = phone.toString().replace(/\D/g, '');
+            return `+${cleaned.substring(0, 2)} ${cleaned.substring(2, 5)} ${cleaned.substring(5, 8)} ${cleaned.substring(8)}`;
+        }
+
+        function formatDate(dateString) {
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            return new Date(dateString).toLocaleDateString('es-ES', options);
+        }
+
+        // Manejar registro de usuario
+        document.getElementById('register-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const registerButton = document.getElementById('register-button');
+            const originalText = registerButton.textContent;
+            registerButton.disabled = true;
+            registerButton.innerHTML = '<span class="loading"></span> Registrando...';
+            
+            try {
+                const name = document.getElementById('register-name').value.trim();
+                const phone = document.getElementById('register-phone').value.trim();
+                const email = document.getElementById('register-email').value.trim();
+                const password = document.getElementById('register-password').value;
+                const confirm = document.getElementById('register-confirm').value;
+                
+                // Validaciones
+                if (!name || !phone || !email || !password || !confirm) {
+                    throw new Error('Por favor completa todos los campos');
+                }
+                
+                if (password !== confirm) {
+                    throw new Error('Las contraseñas no coinciden');
+                }
+                
+                if (password.length < 6) {
+                    throw new Error('La contraseña debe tener al menos 6 caracteres');
+                }
+                
+                if (!phone.match(/^[0-9]{10,15}$/)) {
+                    throw new Error('Por favor ingresa un número de teléfono válido (10-15 dígitos)');
+                }
+                
+                if (!email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
+                    throw new Error('Por favor ingresa un correo electrónico válido');
+                }
+                
+                // Verificar si el usuario ya existe
+                const existingUser = await db.users.getByEmail(email);
+                if (existingUser) {
+                    throw new Error('Este correo electrónico ya está registrado');
+                }
+                
+                // Registrar usuario en Firebase Auth
+                const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+                const firebaseUser = userCredential.user;
+                
+                // Guardar información adicional del usuario
+                const newUser = {
+                    id: firebaseUser.uid,
+                    name,
+                    phone,
+                    email,
+                    createdAt: new Date().toISOString()
+                };
+                
+                await db.users.add(newUser);
+                
+                // Actualizar estado de la aplicación
+                appState.isLoggedIn = true;
+                appState.currentUser = newUser;
+                saveState();
+                updateNav();
+                
+                alert('Registro exitoso. Ahora puedes publicar propiedades.');
+                showSection('home');
+            } catch (error) {
+                console.error('Error en registro:', error);
+                
+                let errorMessage = 'Error en registro';
+                if (error.code) {
+                    switch (error.code) {
+                        case 'auth/email-already-in-use':
+                            errorMessage = 'Este correo electrónico ya está registrado';
+                            break;
+                        case 'auth/invalid-email':
+                            errorMessage = 'Correo electrónico inválido';
+                            break;
+                        case 'auth/weak-password':
+                            errorMessage = 'La contraseña debe tener al menos 6 caracteres';
+                            break;
+                        default:
+                            errorMessage = error.message || errorMessage;
+                    }
+                } else {
+                    errorMessage = error.message || errorMessage;
+                }
+                
+                alert(errorMessage);
+            } finally {
+                registerButton.disabled = false;
+                registerButton.textContent = originalText;
+            }
+        });
+
+        // Manejar inicio de sesión
+        document.getElementById('login-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const loginButton = document.getElementById('login-button');
+            const originalText = loginButton.textContent;
+            loginButton.disabled = true;
+            loginButton.innerHTML = '<span class="loading"></span> Iniciando sesión...';
+            
+            try {
+                const email = document.getElementById('login-email').value.trim();
+                const password = document.getElementById('login-password').value;
+                
+                if (!email || !password) {
+                    throw new Error('Por favor ingresa tu correo y contraseña');
+                }
+                
+                // Iniciar sesión con Firebase Auth
+                const userCredential = await auth.signInWithEmailAndPassword(email, password);
+                const firebaseUser = userCredential.user;
+                
+                // Obtener información adicional del usuario
+                const users = JSON.parse(localStorage.getItem('users')) || [];
+                const user = users.find(u => u.email === firebaseUser.email);
+                
+                if (!user) {
+                    throw new Error('Usuario no encontrado en la base de datos');
+                }
+                
+                // Actualizar estado de la aplicación
+                appState.isLoggedIn = true;
+                appState.currentUser = user;
+                saveState();
+                updateNav();
+                
+                alert('Inicio de sesión exitoso');
+                showSection('home');
+            } catch (error) {
+                console.error('Error en inicio de sesión:', error);
+                
+                let errorMessage = 'Error en inicio de sesión';
+                if (error.code) {
+                    switch (error.code) {
+                        case 'auth/user-not-found':
+                            errorMessage = 'Usuario no encontrado';
+                            break;
+                        case 'auth/wrong-password':
+                            errorMessage = 'Contraseña incorrecta';
+                            break;
+                        case 'auth/invalid-email':
+                            errorMessage = 'Correo electrónico inválido';
+                            break;
+                        default:
+                            errorMessage = error.message || errorMessage;
+                    }
+                } else {
+                    errorMessage = error.message || errorMessage;
+                }
+                
+                alert(errorMessage);
+            } finally {
+                loginButton.disabled = false;
+                loginButton.textContent = originalText;
+            }
+        });
+
+        // Manejar formulario de contacto
+        document.getElementById('contact-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const name = document.getElementById('contact-name').value;
+            const subject = document.getElementById('contact-subject').value;
+            
+            alert(`Gracias ${name}, tu mensaje sobre "${subject}" ha sido enviado. Nos contactaremos contigo pronto.`);
+            showSection('home');
+        });
+
+        // Escuchar cambios en el estado de autenticación
+        auth.onAuthStateChanged((user) => {
+            if (user) {
+                // Usuario logueado
+                const users = JSON.parse(localStorage.getItem('users')) || [];
+                const currentUser = users.find(u => u.email === user.email);
+                
+                if (currentUser) {
+                    appState.isLoggedIn = true;
+                    appState.currentUser = currentUser;
+                    saveState();
+                    updateNav();
+                }
+            } else {
+                // Usuario no logueado
+                appState.isLoggedIn = false;
+                appState.currentUser = null;
+                saveState();
+                updateNav();
+            }
+        });
+
+        // Inicializar la aplicación
+        document.addEventListener('DOMContentLoaded', function() {
+            // Mostrar sección de inicio al cargar la página
+            showSection('home');
+            
+            // Verificar si hay un usuario en localStorage
+            const savedUser = localStorage.getItem('currentUser');
+            if (savedUser) {
+                try {
+                    const user = JSON.parse(savedUser);
+                    if (user && user.email) {
+                        appState.currentUser = user;
+                        appState.isLoggedIn = true;
+                        updateNav();
+                    }
+                } catch (error) {
+                    console.error('Error cargando usuario guardado:', error);
+                }
+            }
+        });
+    </script>
+</body>
+</html>

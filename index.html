@@ -7,7 +7,6 @@
     <!-- Agregar los SDK de Firebase -->
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-storage-compat.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -294,21 +293,6 @@
             margin: 0.5rem 0;
             color: #555;
         }
-
-        .progress-bar {
-            width: 100%;
-            background-color: #e0e0e0;
-            border-radius: 4px;
-            margin-top: 10px;
-        }
-
-        .progress-bar-fill {
-            height: 10px;
-            background-color: #0056b3;
-            border-radius: 4px;
-            width: 0%;
-            transition: width 0.3s ease;
-        }
     </style>
 </head>
 <body>
@@ -428,11 +412,8 @@
                     </div>
                     
                     <div class="form-group">
-                        <label for="property-images">Fotos de la propiedad (Máx. 10):</label>
+                        <label for="property-images">Fotos de la propiedad (Múltiples, max 1MB cada una):</label>
                         <input type="file" id="property-images" multiple accept="image/*">
-                        <div class="progress-bar hidden" id="upload-progress">
-                            <div class="progress-bar-fill" id="progress-bar-fill"></div>
-                        </div>
                         <div class="image-preview-container" id="image-preview"></div>
                     </div>
                     
@@ -543,7 +524,6 @@
             apiKey: "AIzaSyDm4482FNu-9yMpbdbp4z2Rldy5sPlZjq8",
             authDomain: "kursana-71cc3.firebaseapp.com",
             projectId: "kursana-71cc3",
-            storageBucket: "kursana-71cc3.appspot.com",
             messagingSenderId: "74043290336",
             appId: "1:74043290336:web:feb3bfda3ea6867d531685",
             measurementId: "G-YMXCY3VB54"
@@ -552,7 +532,6 @@
         // Inicializar Firebase
         const app = firebase.initializeApp(firebaseConfig);
         const auth = firebase.auth();
-        const storage = firebase.storage();
 
         // Estado de la aplicación
         const appState = {
@@ -888,26 +867,29 @@
             }
         }
 
-        // Función para comprimir imágenes antes de subir
-        function compressImage(file) {
+        // Función para comprimir imágenes a menos de 1MB
+        async function compressImage(file) {
             return new Promise((resolve) => {
-                if (file.size < 500000) { // No comprimir si ya es pequeño (menos de 500KB)
-                    resolve(file);
-                    return;
-                }
-
                 const reader = new FileReader();
+                reader.readAsDataURL(file);
+                
                 reader.onload = (event) => {
                     const img = new Image();
                     img.src = event.target.result;
+                    
                     img.onload = () => {
                         const canvas = document.createElement('canvas');
-                        const MAX_WIDTH = 1024;
-                        const MAX_HEIGHT = 1024;
+                        const ctx = canvas.getContext('2d');
+                        
+                        // Tamaño máximo deseado (1MB)
+                        const MAX_WIDTH = 800;
+                        const MAX_HEIGHT = 800;
+                        const QUALITY = 0.7;
+                        
                         let width = img.width;
                         let height = img.height;
-
-                        // Redimensionar manteniendo proporciones
+                        
+                        // Redimensionar si es necesario
                         if (width > height) {
                             if (width > MAX_WIDTH) {
                                 height *= MAX_WIDTH / width;
@@ -919,129 +901,41 @@
                                 height = MAX_HEIGHT;
                             }
                         }
-
+                        
                         canvas.width = width;
                         canvas.height = height;
-                        const ctx = canvas.getContext('2d');
                         ctx.drawImage(img, 0, 0, width, height);
-
-                        // Convertir a JPEG con calidad del 70%
-                        canvas.toBlob((blob) => {
-                            resolve(new File([blob], file.name, {
-                                type: 'image/jpeg',
-                                lastModified: Date.now()
-                            }));
-                        }, 'image/jpeg', 0.7);
+                        
+                        // Convertir a base64 con calidad reducida
+                        const dataUrl = canvas.toDataURL('image/jpeg', QUALITY);
+                        
+                        // Convertir a Blob
+                        const dataUrlToBlob = (dataUrl) => {
+                            const arr = dataUrl.split(',');
+                            const mime = arr[0].match(/:(.*?);/)[1];
+                            const bstr = atob(arr[1]);
+                            let n = bstr.length;
+                            const u8arr = new Uint8Array(n);
+                            while (n--) {
+                                u8arr[n] = bstr.charCodeAt(n);
+                            }
+                            return new Blob([u8arr], { type: mime });
+                        };
+                        
+                        const blob = dataUrlToBlob(dataUrl);
+                        
+                        // Verificar tamaño
+                        if (blob.size > 1000000) { // 1MB
+                            // Si sigue siendo grande, reducir más la calidad
+                            const newDataUrl = canvas.toDataURL('image/jpeg', 0.5);
+                            const newBlob = dataUrlToBlob(newDataUrl);
+                            resolve(newBlob);
+                        } else {
+                            resolve(blob);
+                        }
                     };
                 };
-                reader.readAsDataURL(file);
             });
-        }
-
-        // Función mejorada para subir imágenes con reintentos
-        async function uploadWithRetry(file, path, metadata, maxRetries = 3) {
-            let lastError;
-            
-            for (let i = 0; i < maxRetries; i++) {
-                try {
-                    const storageRef = storage.ref(path);
-                    const uploadTask = storageRef.put(file, metadata);
-                    
-                    return await new Promise((resolve, reject) => {
-                        // Configurar timeout de 30 segundos
-                        const uploadTimeout = setTimeout(() => {
-                            uploadTask.cancel();
-                            reject(new Error('Tiempo de espera agotado al subir la imagen'));
-                        }, 30000);
-
-                        uploadTask.on(
-                            'state_changed',
-                            (snapshot) => {
-                                // Actualizar barra de progreso
-                                const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-                                document.getElementById('progress-bar-fill').style.width = `${progress}%`;
-                            },
-                            (error) => {
-                                clearTimeout(uploadTimeout);
-                                reject(error);
-                            },
-                            async () => {
-                                clearTimeout(uploadTimeout);
-                                try {
-                                    const url = await uploadTask.snapshot.ref.getDownloadURL();
-                                    resolve(url);
-                                } catch (error) {
-                                    reject(error);
-                                }
-                            }
-                        );
-                    });
-                } catch (error) {
-                    lastError = error;
-                    console.warn(`Intento ${i + 1} fallido, reintentando...`, error);
-                    await new Promise(resolve => setTimeout(resolve, 2000 * (i + 1))); // Espera exponencial
-                }
-            }
-            
-            throw lastError || new Error('Falló la subida después de múltiples intentos');
-        }
-
-        // Función principal para subir imágenes
-        async function uploadImages(files, propertyId) {
-            if (!files || files.length === 0) {
-                throw new Error('No se han seleccionado imágenes para subir');
-            }
-            
-            if (!appState.isLoggedIn) {
-                throw new Error('Debes iniciar sesión para subir imágenes');
-            }
-
-            // Limitar a 10 imágenes máximo
-            const filesToUpload = Array.from(files).slice(0, 10);
-            const imageUrls = [];
-
-            // Mostrar barra de progreso
-            document.getElementById('upload-progress').classList.remove('hidden');
-            document.getElementById('progress-bar-fill').style.width = '0%';
-
-            for (const file of filesToUpload) {
-                if (!file.type.match('image.*')) {
-                    console.warn(`El archivo ${file.name} no es una imagen y será omitido`);
-                    continue;
-                }
-
-                try {
-                    // Comprimir imagen antes de subir
-                    const compressedFile = await compressImage(file);
-                    
-                    // Generar nombre de archivo único
-                    const fileExtension = file.name.split('.').pop();
-                    const safeFileName = `img_${Date.now()}_${Math.random().toString(36).substring(2, 8)}.${fileExtension}`;
-                    const storagePath = `properties/${propertyId}/${safeFileName}`;
-                    
-                    // Configurar metadata
-                    const metadata = {
-                        contentType: file.type,
-                        cacheControl: 'public, max-age=31536000' // 1 año de caché
-                    };
-
-                    // Subir con reintentos
-                    const url = await uploadWithRetry(compressedFile, storagePath, metadata);
-                    imageUrls.push(url);
-                } catch (error) {
-                    console.error(`Error subiendo ${file.name}:`, error);
-                    throw new Error(`Error al subir ${file.name}: ${error.message}`);
-                }
-            }
-
-            // Ocultar barra de progreso
-            document.getElementById('upload-progress').classList.add('hidden');
-
-            if (imageUrls.length === 0) {
-                throw new Error('No se pudieron subir imágenes válidas');
-            }
-
-            return imageUrls;
         }
 
         // Manejar publicación de propiedad
@@ -1054,20 +948,48 @@
             publishButton.innerHTML = '<span class="loading"></span> Publicando...';
             
             try {
-                // Verificar conexión a internet
-                if (!navigator.onLine) {
-                    throw new Error('No hay conexión a internet. Por favor verifica tu conexión.');
+                // Verificar autenticación
+                if (!appState.isLoggedIn) {
+                    throw new Error('Debes iniciar sesión para publicar propiedades');
                 }
-
+                
                 const propertyId = Date.now();
                 const imageFiles = document.getElementById('property-images').files;
                 let imageUrls = [];
                 
+                // Procesar imágenes si hay archivos seleccionados
                 if (imageFiles.length > 0) {
-                    imageUrls = await uploadImages(imageFiles, propertyId);
+                    for (let i = 0; i < imageFiles.length; i++) {
+                        const file = imageFiles[i];
+                        
+                        // Verificar que sea una imagen
+                        if (!file.type.match('image.*')) {
+                            console.warn(`El archivo ${file.name} no es una imagen y será omitido`);
+                            continue;
+                        }
+                        
+                        // Comprimir imágenes mayores a 500KB
+                        let processedFile = file;
+                        if (file.size > 500000) { // 500KB
+                            processedFile = await compressImage(file);
+                        }
+                        
+                        // Convertir a base64 para almacenamiento local
+                        const base64 = await new Promise((resolve) => {
+                            const reader = new FileReader();
+                            reader.readAsDataURL(processedFile);
+                            reader.onload = () => resolve(reader.result);
+                        });
+                        
+                        imageUrls.push(base64);
+                    }
                 } else {
                     // Usar imagen por defecto si no se subieron imágenes
                     imageUrls = ["https://images.unsplash.com/photo-1560448204-603b3fc33ddc?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80"];
+                }
+                
+                if (imageUrls.length === 0) {
+                    throw new Error('No se pudieron procesar las imágenes. Asegúrate de que son archivos de imagen válidos.');
                 }
                 
                 // Crear objeto de propiedad
@@ -1111,27 +1033,7 @@
                 showSection('home');
             } catch (error) {
                 console.error('Error al publicar propiedad:', error);
-                
-                let errorMessage = 'Error al publicar propiedad';
-                if (error.code) {
-                    switch (error.code) {
-                        case 'storage/unauthorized':
-                            errorMessage = 'No tienes permiso para subir archivos';
-                            break;
-                        case 'storage/canceled':
-                            errorMessage = 'Subida cancelada';
-                            break;
-                        case 'storage/unknown':
-                            errorMessage = 'Error desconocido en el almacenamiento';
-                            break;
-                        default:
-                            errorMessage = error.message || errorMessage;
-                    }
-                } else {
-                    errorMessage = error.message || errorMessage;
-                }
-                
-                alert(errorMessage);
+                alert(error.message || 'Error al publicar propiedad');
             } finally {
                 publishButton.disabled = false;
                 publishButton.textContent = originalText;
@@ -1146,11 +1048,8 @@
             const files = e.target.files;
             if (!files || files.length === 0) return;
             
-            // Limitar a 10 imágenes
-            const filesToShow = Array.from(files).slice(0, 10);
-            
-            for (let i = 0; i < filesToShow.length; i++) {
-                const file = filesToShow[i];
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
                 if (!file.type.match('image.*')) continue;
                 
                 const reader = new FileReader();

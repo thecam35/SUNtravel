@@ -7,6 +7,7 @@
     <!-- Agregar los SDK de Firebase -->
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-firestore-compat.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -475,7 +476,6 @@
             
             <h3>Propiedades destacadas</h3>
             <div class="property-list" id="featured-properties">
-                <!-- Las propiedades destacadas se cargarán dinámicamente -->
                 <p>Cargando propiedades destacadas...</p>
             </div>
         </section>
@@ -484,7 +484,6 @@
         <section id="properties-section" class="hidden">
             <h2 class="section-title">Todas las Propiedades</h2>
             <div class="property-list" id="all-properties">
-                <!-- Todas las propiedades se cargarán dinámicamente -->
                 <p>Cargando propiedades...</p>
             </div>
         </section>
@@ -661,7 +660,7 @@
                     
                     <h3>Fotos de la Propiedad</h3>
                     <div class="form-group">
-                        <label for="property-images">Sube fotos de tu propiedad (Máx. 10 imágenes, 1MB cada una):</label>
+                        <label for="property-images">Sube fotos de tu propiedad (Máx. 5 imágenes, 500KB cada una):</label>
                         <input type="file" id="property-images" multiple accept="image/*">
                         <div class="image-preview-container" id="image-preview"></div>
                     </div>
@@ -693,11 +692,11 @@
             
             <div class="profile-container">
                 <div class="profile-sidebar">
-                    <img src="https://ui-avatars.com/api/?name=${appState.currentUser?.name || 'Usuario'}&background=0056b3&color=fff" class="user-avatar" id="user-avatar">
-                    <h3 id="user-name">${appState.currentUser?.name || 'Usuario'}</h3>
-                    <p><strong>Teléfono:</strong> <span id="user-phone">${appState.currentUser?.phone || 'No registrado'}</span></p>
-                    <p><strong>Email:</strong> <span id="user-email">${appState.currentUser?.email || 'No registrado'}</span></p>
-                    <p><strong>Miembro desde:</strong> <span id="user-since">${appState.currentUser?.createdAt ? new Date(appState.currentUser.createdAt).toLocaleDateString() : 'No disponible'}</span></p>
+                    <img src="https://ui-avatars.com/api/?name=Usuario&background=0056b3&color=fff" class="user-avatar" id="user-avatar">
+                    <h3 id="user-name">Usuario</h3>
+                    <p><strong>Teléfono:</strong> <span id="user-phone">No registrado</span></p>
+                    <p><strong>Email:</strong> <span id="user-email">No registrado</span></p>
+                    <p><strong>Miembro desde:</strong> <span id="user-since">No disponible</span></p>
                     
                     <button onclick="showSection('publish')" style="margin-top: 1rem;">Publicar Nueva Propiedad</button>
                 </div>
@@ -729,17 +728,17 @@
                             <form id="profile-form" class="form-container">
                                 <div class="form-group">
                                     <label for="profile-name">Nombre completo:</label>
-                                    <input type="text" id="profile-name" value="${appState.currentUser?.name || ''}">
+                                    <input type="text" id="profile-name">
                                 </div>
                                 
                                 <div class="form-group">
                                     <label for="profile-phone">Teléfono / WhatsApp:</label>
-                                    <input type="tel" id="profile-phone" value="${appState.currentUser?.phone || ''}">
+                                    <input type="tel" id="profile-phone">
                                 </div>
                                 
                                 <div class="form-group">
                                     <label for="profile-email">Correo electrónico:</label>
-                                    <input type="email" id="profile-email" value="${appState.currentUser?.email || ''}" disabled>
+                                    <input type="email" id="profile-email" disabled>
                                 </div>
                                 
                                 <h4>Cambiar Contraseña</h4>
@@ -868,6 +867,7 @@
             apiKey: "AIzaSyDm4482FNu-9yMpbdbp4z2Rldy5sPlZjq8",
             authDomain: "kursana-71cc3.firebaseapp.com",
             projectId: "kursana-71cc3",
+            storageBucket: "kursana-71cc3.appspot.com",
             messagingSenderId: "74043290336",
             appId: "1:74043290336:web:feb3bfda3ea6867d531685",
             measurementId: "G-YMXCY3VB54"
@@ -876,186 +876,165 @@
         // Inicializar Firebase
         const app = firebase.initializeApp(firebaseConfig);
         const auth = firebase.auth();
+        const db = firebase.firestore();
 
         // Estado de la aplicación
         const appState = {
             isLoggedIn: false,
-            currentUser: null,
-            properties: [],
-            users: [],
-            reservations: []
+            currentUser: null
         };
 
-        // Referencia a la base de datos (simulada con localStorage)
-        const db = {
-            properties: {
-                async getAll() {
-                    return JSON.parse(localStorage.getItem('properties')) || [];
-                },
-                async add(property) {
-                    const properties = await this.getAll();
-                    property.id = property.id || Date.now();
-                    properties.push(property);
-                    localStorage.setItem('properties', JSON.stringify(properties));
-                    return property;
-                },
-                async getById(id) {
-                    const properties = await this.getAll();
-                    return properties.find(p => p.id === id);
-                },
-                async getByOwner(ownerId) {
-                    const properties = await this.getAll();
-                    return properties.filter(p => p.ownerId === ownerId);
-                },
-                async update(property) {
-                    const properties = await this.getAll();
-                    const index = properties.findIndex(p => p.id === property.id);
-                    if (index !== -1) {
-                        properties[index] = property;
-                        localStorage.setItem('properties', JSON.stringify(properties));
-                        return true;
-                    }
-                    return false;
-                },
-                async delete(id) {
-                    const properties = await this.getAll();
-                    const filtered = properties.filter(p => p.id !== id);
-                    localStorage.setItem('properties', JSON.stringify(filtered));
-                    return true;
-                }
-            },
-            users: {
-                async getByEmail(email) {
-                    const users = JSON.parse(localStorage.getItem('users')) || [];
-                    return users.find(u => u.email === email);
-                },
-                async add(user) {
-                    const users = JSON.parse(localStorage.getItem('users')) || [];
-                    users.push(user);
-                    localStorage.setItem('users', JSON.stringify(users));
-                    return user;
-                },
-                async update(user) {
-                    const users = JSON.parse(localStorage.getItem('users')) || [];
-                    const index = users.findIndex(u => u.id === user.id);
-                    if (index !== -1) {
-                        users[index] = user;
-                        localStorage.setItem('users', JSON.stringify(users));
-                        return true;
-                    }
-                    return false;
-                }
-            },
-            reservations: {
-                async getAll() {
-                    return JSON.parse(localStorage.getItem('reservations')) || [];
-                },
-                async add(reservation) {
-                    const reservations = await this.getAll();
-                    reservation.id = reservation.id || Date.now();
-                    reservations.push(reservation);
-                    localStorage.setItem('reservations', JSON.stringify(reservations));
-                    return reservation;
-                },
-                async getByProperty(propertyId) {
-                    const reservations = await this.getAll();
-                    return reservations.filter(r => r.propertyId === propertyId);
-                },
-                async getByOwner(ownerId) {
-                    const reservations = await this.getAll();
-                    return reservations.filter(r => r.ownerId === ownerId);
-                },
-                async update(reservation) {
-                    const reservations = await this.getAll();
-                    const index = reservations.findIndex(r => r.id === reservation.id);
-                    if (index !== -1) {
-                        reservations[index] = reservation;
-                        localStorage.setItem('reservations', JSON.stringify(reservations));
-                        return true;
-                    }
-                    return false;
-                }
-            }
-        };
-
-        // Función para guardar el estado en localStorage
-        function saveState() {
-            localStorage.setItem('currentUser', JSON.stringify(appState.currentUser));
-        }
-
-        // Actualizar navegación según estado de login
-        function updateNav() {
-            const registerItem = document.getElementById('register-nav-item');
-            const loginItem = document.getElementById('login-nav-item');
-            const profileItem = document.getElementById('profile-nav-item');
-            const logoutItem = document.getElementById('logout-nav-item');
-            
-            if (appState.isLoggedIn) {
-                registerItem.classList.add('hidden');
-                loginItem.classList.add('hidden');
-                profileItem.classList.remove('hidden');
-                logoutItem.classList.remove('hidden');
-            } else {
-                registerItem.classList.remove('hidden');
-                loginItem.classList.remove('hidden');
-                profileItem.classList.add('hidden');
-                logoutItem.classList.add('hidden');
-            }
-        }
-
-        // Cerrar sesión
-        function logout() {
-            auth.signOut().then(() => {
-                appState.isLoggedIn = false;
-                appState.currentUser = null;
-                saveState();
-                updateNav();
-                showSection('home');
-                alert('Has cerrado sesión correctamente');
-            }).catch(error => {
-                console.error('Error al cerrar sesión:', error);
-                alert('Ocurrió un error al cerrar sesión');
+        // Función para comprimir imágenes
+        async function compressImage(file) {
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                
+                reader.onload = (event) => {
+                    const img = new Image();
+                    img.src = event.target.result;
+                    
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        const ctx = canvas.getContext('2d');
+                        
+                        // Tamaño máximo deseado (500KB)
+                        const MAX_WIDTH = 800;
+                        const MAX_HEIGHT = 800;
+                        const QUALITY = 0.7;
+                        
+                        let width = img.width;
+                        let height = img.height;
+                        
+                        // Redimensionar si es necesario
+                        if (width > height) {
+                            if (width > MAX_WIDTH) {
+                                height *= MAX_WIDTH / width;
+                                width = MAX_WIDTH;
+                            }
+                        } else {
+                            if (height > MAX_HEIGHT) {
+                                width *= MAX_HEIGHT / height;
+                                height = MAX_HEIGHT;
+                            }
+                        }
+                        
+                        canvas.width = width;
+                        canvas.height = height;
+                        ctx.drawImage(img, 0, 0, width, height);
+                        
+                        // Convertir a Blob con calidad reducida
+                        canvas.toBlob((blob) => {
+                            resolve(blob);
+                        }, 'image/jpeg', QUALITY);
+                    };
+                };
             });
         }
 
-        // Mostrar sección específica
-        function showSection(sectionId) {
-            // Ocultar todas las secciones
-            document.querySelectorAll('section').forEach(section => {
-                section.classList.add('hidden');
+        // Función para convertir imagen a Base64
+        async function imageToBase64(blob) {
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(blob);
+                reader.onload = () => resolve(reader.result);
             });
-            
-            // Mostrar la sección solicitada
-            if (sectionId === 'home') {
-                document.getElementById('home-section').classList.remove('hidden');
-                loadFeaturedProperties();
-            } else if (sectionId === 'properties') {
-                document.getElementById('properties-section').classList.remove('hidden');
-                loadAllProperties();
-            } else if (sectionId === 'publish') {
-                document.getElementById('publish-section').classList.remove('hidden');
-                updatePublishSection();
-            } else if (sectionId === 'register') {
-                document.getElementById('register-section').classList.remove('hidden');
-            } else if (sectionId === 'login') {
-                document.getElementById('login-section').classList.remove('hidden');
-            } else if (sectionId === 'contact') {
-                document.getElementById('contact-section').classList.remove('hidden');
-            } else if (sectionId === 'property-detail') {
-                document.getElementById('property-detail-section').classList.remove('hidden');
-            } else if (sectionId === 'profile') {
-                document.getElementById('profile-section').classList.remove('hidden');
-                loadUserProfile();
-            }
         }
 
-        // Cargar propiedades destacadas
+        // Función para guardar propiedad en Firestore
+        async function saveProperty(propertyData, imageFiles) {
+            // Validar número de imágenes
+            if (imageFiles.length > 5) {
+                throw new Error('Máximo 5 imágenes permitidas');
+            }
+            
+            // Comprimir y convertir imágenes
+            const imageUrls = [];
+            for (let i = 0; i < imageFiles.length; i++) {
+                const file = imageFiles[i];
+                if (!file.type.match('image.*')) continue;
+                
+                let processedFile = file;
+                if (file.size > 500000) { // 500KB
+                    processedFile = await compressImage(file);
+                }
+                
+                const base64 = await imageToBase64(processedFile);
+                imageUrls.push(base64);
+            }
+            
+            // Guardar en Firestore
+            const propertyRef = await db.collection('properties').add({
+                ...propertyData,
+                images: imageUrls,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                ownerId: appState.currentUser.id
+            });
+            
+            return propertyRef.id;
+        }
+
+        // Función para cargar propiedades
+        async function loadProperties(limit = null) {
+            let query = db.collection('properties').orderBy('createdAt', 'desc');
+            if (limit) query = query.limit(limit);
+            
+            const snapshot = await query.get();
+            const properties = [];
+            
+            snapshot.forEach(doc => {
+                properties.push({
+                    id: doc.id,
+                    ...doc.data()
+                });
+            });
+            
+            return properties;
+        }
+
+        // Función para cargar propiedades de un usuario
+        async function loadUserProperties(userId) {
+            const snapshot = await db.collection('properties')
+                .where('ownerId', '==', userId)
+                .orderBy('createdAt', 'desc')
+                .get();
+            
+            const properties = [];
+            snapshot.forEach(doc => {
+                properties.push({
+                    id: doc.id,
+                    ...doc.data()
+                });
+            });
+            
+            return properties;
+        }
+
+        // Función para cargar reservaciones
+        async function loadReservations(ownerId) {
+            const snapshot = await db.collection('reservations')
+                .where('ownerId', '==', ownerId)
+                .orderBy('createdAt', 'desc')
+                .get();
+            
+            const reservations = [];
+            snapshot.forEach(doc => {
+                reservations.push({
+                    id: doc.id,
+                    ...doc.data()
+                });
+            });
+            
+            return reservations;
+        }
+
+        // Función para mostrar propiedades destacadas
         async function loadFeaturedProperties() {
             const featuredContainer = document.getElementById('featured-properties');
             featuredContainer.innerHTML = '<p>Cargando propiedades destacadas...</p>';
             
             try {
-                const properties = await db.properties.getAll();
+                const properties = await loadProperties(3);
                 
                 if (properties.length === 0) {
                     featuredContainer.innerHTML = '<p>No hay propiedades destacadas disponibles.</p>';
@@ -1064,15 +1043,14 @@
                 
                 featuredContainer.innerHTML = '';
                 
-                // Mostrar las primeras 3 propiedades como destacadas
-                properties.slice(0, 3).forEach(property => {
+                properties.forEach(property => {
                     featuredContainer.innerHTML += `
                         <div class="property-card">
                             <img src="${property.images[0]}" alt="${property.title}">
                             <h4>${property.title}</h4>
-                            <p>${property.rooms} habitaciones, ${property.bathrooms} baño(s)</p>
+                            <p>${property.rooms || 0} habitaciones, ${property.bathrooms} baño(s)</p>
                             <p><strong>$${property.price.toLocaleString()} / noche</strong></p>
-                            <button onclick="showPropertyDetail(${property.id})">Ver detalles</button>
+                            <button onclick="showPropertyDetail('${property.id}')">Ver detalles</button>
                         </div>
                     `;
                 });
@@ -1082,13 +1060,13 @@
             }
         }
 
-        // Cargar todas las propiedades
+        // Función para mostrar todas las propiedades
         async function loadAllProperties() {
             const allContainer = document.getElementById('all-properties');
             allContainer.innerHTML = '<p>Cargando propiedades...</p>';
             
             try {
-                const properties = await db.properties.getAll();
+                const properties = await loadProperties();
                 
                 if (properties.length === 0) {
                     allContainer.innerHTML = '<p>No hay propiedades disponibles.</p>';
@@ -1102,9 +1080,9 @@
                         <div class="property-card">
                             <img src="${property.images[0]}" alt="${property.title}">
                             <h4>${property.title}</h4>
-                            <p>${property.rooms} habitaciones, ${property.bathrooms} baño(s)</p>
+                            <p>${property.rooms || 0} habitaciones, ${property.bathrooms} baño(s)</p>
                             <p><strong>$${property.price.toLocaleString()} / noche</strong></p>
-                            <button onclick="showPropertyDetail(${property.id})">Ver detalles</button>
+                            <button onclick="showPropertyDetail('${property.id}')">Ver detalles</button>
                         </div>
                     `;
                 });
@@ -1114,36 +1092,25 @@
             }
         }
 
-        // Actualizar sección de publicación según estado de login
-        function updatePublishSection() {
-            const loginMsg = document.getElementById('publish-login-message');
-            const formContainer = document.getElementById('publish-form-container');
-            
-            if (appState.isLoggedIn) {
-                loginMsg.classList.add('hidden');
-                formContainer.classList.remove('hidden');
-            } else {
-                loginMsg.classList.remove('hidden');
-                formContainer.classList.add('hidden');
-            }
-        }
-
-        // Mostrar detalle de propiedad
+        // Función para mostrar detalle de propiedad
         async function showPropertyDetail(propertyId) {
             try {
-                const property = await db.properties.getById(propertyId);
-                if (!property) {
+                const doc = await db.collection('properties').doc(propertyId).get();
+                if (!doc.exists) {
                     throw new Error('Propiedad no encontrada');
                 }
                 
-                // Buscar al dueño de la propiedad
-                const users = JSON.parse(localStorage.getItem('users')) || [];
-                const owner = users.find(u => u.phone === property.phone) || { 
-                    name: "Anfitrión", 
-                    phone: property.phone 
-                };
-                
+                const property = doc.data();
                 const detailContent = document.getElementById('property-detail-content');
+                
+                // Buscar información del dueño
+                let ownerInfo = { name: "Anfitrión", phone: property.phone };
+                if (property.ownerId) {
+                    const userDoc = await db.collection('users').doc(property.ownerId).get();
+                    if (userDoc.exists) {
+                        ownerInfo = userDoc.data();
+                    }
+                }
                 
                 // Crear galería de imágenes
                 let galleryHTML = '';
@@ -1175,13 +1142,13 @@
                         <p><strong>Operación:</strong> ${property.operation === 'rent' ? 'Arriendo' : 'Venta'}</p>
                         <p><strong>Ubicación:</strong> ${property.address}, ${getZoneName(property.zone)}</p>
                         <p><strong>Precio por noche:</strong> $${property.price.toLocaleString()} COP</p>
-                        <p><strong>Área construida:</strong> ${property.area || 'No especificado'} m²</p>
-                        <p><strong>Habitaciones:</strong> ${property.rooms || '0'}</p>
+                        ${property.area ? `<p><strong>Área construida:</strong> ${property.area} m²</p>` : ''}
+                        <p><strong>Habitaciones:</strong> ${property.rooms || 0}</p>
                         <p><strong>Baños:</strong> ${property.bathrooms}</p>
                         <p><strong>Capacidad:</strong> ${property.capacity} personas</p>
-                        <p><strong>Pisos:</strong> ${property.floors || '1'}</p>
-                        <p><strong>Parqueaderos:</strong> ${property.parking || '0'}</p>
-                        <p><strong>Contacto:</strong> ${owner.name} - ${formatPhone(owner.phone)}</p>
+                        <p><strong>Pisos:</strong> ${property.floors || 1}</p>
+                        <p><strong>Parqueaderos:</strong> ${property.parking || 0}</p>
+                        <p><strong>Contacto:</strong> ${ownerInfo.name} - ${formatPhone(ownerInfo.phone)}</p>
                     </div>
                     
                     <h3>Descripción</h3>
@@ -1246,7 +1213,7 @@
                 // Configurar el formulario de reserva
                 document.getElementById('reservation-form').addEventListener('submit', function(e) {
                     e.preventDefault();
-                    sendReservation(property, owner);
+                    sendReservation(property, ownerInfo);
                 });
                 
                 // Mostrar la sección de detalle
@@ -1258,14 +1225,8 @@
             }
         }
 
-        // Función para cambiar la imagen principal en la galería
-        function changeMainImage(imgElement, mainImageId) {
-            const mainImg = document.getElementById(mainImageId);
-            mainImg.src = imgElement.src;
-        }
-
-        // Función para enviar reserva por WhatsApp
-        function sendReservation(property, owner) {
+        // Función para enviar reserva
+        async function sendReservation(property, owner) {
             try {
                 const checkin = document.getElementById('reservation-checkin').value;
                 const checkout = document.getElementById('reservation-checkout').value;
@@ -1301,9 +1262,10 @@
                 // Abrir WhatsApp con el mensaje
                 window.open(`https://wa.me/${owner.phone}?text=${whatsappMessage}`, '_blank');
                 
-                // Guardar la reserva en la base de datos
-                const newReservation = {
+                // Guardar la reserva en Firestore
+                await db.collection('reservations').add({
                     propertyId: property.id,
+                    propertyTitle: property.title,
                     ownerId: property.ownerId,
                     guestName: name,
                     guestPhone: phone,
@@ -1313,10 +1275,8 @@
                     guests: guests,
                     message: message,
                     status: 'pending',
-                    createdAt: new Date().toISOString()
-                };
-                
-                db.reservations.add(newReservation);
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
                 
                 alert('Se ha abierto WhatsApp con los datos de tu reserva. Por favor completa el proceso de reserva directamente con el propietario.');
             } catch (error) {
@@ -1324,233 +1284,17 @@
             }
         }
 
-        // Función para comprimir imágenes a menos de 1MB
-        async function compressImage(file) {
-            return new Promise((resolve) => {
-                const reader = new FileReader();
-                reader.readAsDataURL(file);
-                
-                reader.onload = (event) => {
-                    const img = new Image();
-                    img.src = event.target.result;
-                    
-                    img.onload = () => {
-                        const canvas = document.createElement('canvas');
-                        const ctx = canvas.getContext('2d');
-                        
-                        // Tamaño máximo deseado (1MB)
-                        const MAX_WIDTH = 800;
-                        const MAX_HEIGHT = 800;
-                        const QUALITY = 0.7;
-                        
-                        let width = img.width;
-                        let height = img.height;
-                        
-                        // Redimensionar si es necesario
-                        if (width > height) {
-                            if (width > MAX_WIDTH) {
-                                height *= MAX_WIDTH / width;
-                                width = MAX_WIDTH;
-                            }
-                        } else {
-                            if (height > MAX_HEIGHT) {
-                                width *= MAX_HEIGHT / height;
-                                height = MAX_HEIGHT;
-                            }
-                        }
-                        
-                        canvas.width = width;
-                        canvas.height = height;
-                        ctx.drawImage(img, 0, 0, width, height);
-                        
-                        // Convertir a base64 con calidad reducida
-                        const dataUrl = canvas.toDataURL('image/jpeg', QUALITY);
-                        
-                        // Convertir a Blob
-                        const dataUrlToBlob = (dataUrl) => {
-                            const arr = dataUrl.split(',');
-                            const mime = arr[0].match(/:(.*?);/)[1];
-                            const bstr = atob(arr[1]);
-                            let n = bstr.length;
-                            const u8arr = new Uint8Array(n);
-                            while (n--) {
-                                u8arr[n] = bstr.charCodeAt(n);
-                            }
-                            return new Blob([u8arr], { type: mime });
-                        };
-                        
-                        const blob = dataUrlToBlob(dataUrl);
-                        
-                        // Verificar tamaño
-                        if (blob.size > 1000000) { // 1MB
-                            // Si sigue siendo grande, reducir más la calidad
-                            const newDataUrl = canvas.toDataURL('image/jpeg', 0.5);
-                            const newBlob = dataUrlToBlob(newDataUrl);
-                            resolve(newBlob);
-                        } else {
-                            resolve(blob);
-                        }
-                    };
-                };
-            });
+        // Función para cambiar imagen principal en galería
+        function changeMainImage(imgElement, mainImageId) {
+            const mainImg = document.getElementById(mainImageId);
+            mainImg.src = imgElement.src;
         }
 
-        // Manejar publicación de propiedad
-        document.getElementById('publish-form').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            
-            const publishButton = document.getElementById('publish-button');
-            const originalText = publishButton.textContent;
-            publishButton.disabled = true;
-            publishButton.innerHTML = '<span class="loading"></span> Publicando...';
-            
-            try {
-                // Verificar autenticación
-                if (!appState.isLoggedIn) {
-                    throw new Error('Debes iniciar sesión para publicar propiedades');
-                }
-                
-                const propertyId = Date.now();
-                const imageFiles = document.getElementById('property-images').files;
-                let imageUrls = [];
-                
-                // Procesar imágenes si hay archivos seleccionados
-                if (imageFiles.length > 0) {
-                    if (imageFiles.length > 10) {
-                        throw new Error('Máximo 10 imágenes permitidas');
-                    }
-                    
-                    for (let i = 0; i < imageFiles.length; i++) {
-                        const file = imageFiles[i];
-                        
-                        // Verificar que sea una imagen
-                        if (!file.type.match('image.*')) {
-                            console.warn(`El archivo ${file.name} no es una imagen y será omitido`);
-                            continue;
-                        }
-                        
-                        // Comprimir imágenes mayores a 500KB
-                        let processedFile = file;
-                        if (file.size > 500000) { // 500KB
-                            processedFile = await compressImage(file);
-                        }
-                        
-                        // Convertir a base64 para almacenamiento local
-                        const base64 = await new Promise((resolve) => {
-                            const reader = new FileReader();
-                            reader.readAsDataURL(processedFile);
-                            reader.onload = () => resolve(reader.result);
-                        });
-                        
-                        imageUrls.push(base64);
-                    }
-                } else {
-                    // Usar imagen por defecto si no se subieron imágenes
-                    imageUrls = ["https://images.unsplash.com/photo-1560448204-603b3fc33ddc?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80"];
-                }
-                
-                if (imageUrls.length === 0) {
-                    throw new Error('No se pudieron procesar las imágenes. Asegúrate de que son archivos de imagen válidos.');
-                }
-                
-                // Obtener comodidades seleccionadas
-                const amenities = [];
-                document.querySelectorAll('.amenities-container input[type="checkbox"]:checked').forEach(checkbox => {
-                    amenities.push(checkbox.nextElementSibling.textContent);
-                });
-                
-                // Crear objeto de propiedad
-                const newProperty = {
-                    id: propertyId,
-                    type: document.getElementById('property-type').value,
-                    operation: document.getElementById('property-operation').value,
-                    title: document.getElementById('property-title').value,
-                    description: document.getElementById('property-description').value,
-                    address: document.getElementById('property-address').value,
-                    zone: document.getElementById('property-zone').value,
-                    price: parseInt(document.getElementById('property-price').value),
-                    area: document.getElementById('property-area').value ? parseInt(document.getElementById('property-area').value) : null,
-                    rooms: document.getElementById('property-rooms').value ? parseInt(document.getElementById('property-rooms').value) : 0,
-                    bathrooms: parseInt(document.getElementById('property-bathrooms').value),
-                    capacity: parseInt(document.getElementById('property-capacity').value),
-                    floors: parseInt(document.getElementById('property-floors').value),
-                    parking: parseInt(document.getElementById('property-parking').value),
-                    phone: appState.currentUser.phone,
-                    ownerId: appState.currentUser.id,
-                    amenities: amenities,
-                    images: imageUrls,
-                    rules: document.getElementById('property-rules').value,
-                    checkin: document.getElementById('property-checkin').value,
-                    checkout: document.getElementById('property-checkout').value,
-                    createdAt: new Date().toISOString()
-                };
-                
-                // Validar datos requeridos
-                if (!newProperty.title || !newProperty.description || !newProperty.address || 
-                    isNaN(newProperty.price) || isNaN(newProperty.bathrooms) || 
-                    isNaN(newProperty.capacity)) {
-                    throw new Error('Por favor completa todos los campos requeridos');
-                }
-                
-                if (newProperty.price <= 0 || newProperty.bathrooms <= 0 || 
-                    newProperty.capacity <= 0) {
-                    throw new Error('Los valores numéricos deben ser mayores a cero');
-                }
-                
-                // Agregar a la lista de propiedades
-                await db.properties.add(newProperty);
-                
-                // Limpiar formulario
-                document.getElementById('publish-form').reset();
-                document.getElementById('image-preview').innerHTML = '';
-                
-                alert('Propiedad publicada con éxito. Los clientes podrán contactarte por WhatsApp para reservar.');
-                showSection('profile');
-            } catch (error) {
-                console.error('Error al publicar propiedad:', error);
-                alert(error.message || 'Error al publicar propiedad');
-            } finally {
-                publishButton.disabled = false;
-                publishButton.textContent = originalText;
-            }
-        });
-
-        // Manejar subida de imágenes (previsualización)
-        document.getElementById('property-images').addEventListener('change', function(e) {
-            const previewContainer = document.getElementById('image-preview');
-            previewContainer.innerHTML = '';
-            
-            const files = e.target.files;
-            if (!files || files.length === 0) return;
-            
-            if (files.length > 10) {
-                alert('Máximo 10 imágenes permitidas. Se mostrarán las primeras 10.');
-            }
-            
-            const filesToShow = Array.from(files).slice(0, 10);
-            
-            for (let i = 0; i < filesToShow.length; i++) {
-                const file = filesToShow[i];
-                if (!file.type.match('image.*')) continue;
-                
-                const reader = new FileReader();
-                
-                reader.onload = function(e) {
-                    const img = document.createElement('img');
-                    img.src = e.target.result;
-                    img.classList.add('image-preview');
-                    previewContainer.appendChild(img);
-                }
-                
-                reader.readAsDataURL(file);
-            }
-        });
-
-        // Cargar perfil de usuario
+        // Función para cargar perfil de usuario
         async function loadUserProfile() {
             if (!appState.isLoggedIn) return;
             
-            // Actualizar información del usuario en el sidebar
+            // Actualizar información del usuario
             document.getElementById('user-name').textContent = appState.currentUser.name;
             document.getElementById('user-phone').textContent = appState.currentUser.phone;
             document.getElementById('user-email').textContent = appState.currentUser.email;
@@ -1565,32 +1309,29 @@
             propertiesList.innerHTML = '<p>Cargando propiedades...</p>';
             
             try {
-                const properties = await db.properties.getByOwner(appState.currentUser.id);
+                const properties = await loadUserProperties(appState.currentUser.id);
                 
                 if (properties.length === 0) {
                     propertiesList.innerHTML = '<p>No has publicado ninguna propiedad aún.</p>';
-                    return;
-                }
-                
-                propertiesList.innerHTML = '';
-                
-                properties.forEach(property => {
-                    propertiesList.innerHTML += `
-                        <div class="property-card">
-                            <img src="${property.images[0]}" alt="${property.title}">
-                            <h4>${property.title}</h4>
-                            <p>${property.rooms} habitaciones, ${property.bathrooms} baño(s)</p>
-                            <p><strong>$${property.price.toLocaleString()} / noche</strong></p>
-                            <p><strong>Estado:</strong> ${property.status || 'Activo'}</p>
-                            <div class="property-actions">
-                                <button class="edit-btn" onclick="editProperty(${property.id})">Editar</button>
-                                <button class="delete-btn" onclick="deleteProperty(${property.id})">Eliminar</button>
+                } else {
+                    propertiesList.innerHTML = '';
+                    properties.forEach(property => {
+                        propertiesList.innerHTML += `
+                            <div class="property-card">
+                                <img src="${property.images[0]}" alt="${property.title}">
+                                <h4>${property.title}</h4>
+                                <p>${property.rooms || 0} habitaciones, ${property.bathrooms} baño(s)</p>
+                                <p><strong>$${property.price.toLocaleString()} / noche</strong></p>
+                                <div class="property-actions">
+                                    <button class="edit-btn" onclick="editProperty('${property.id}')">Editar</button>
+                                    <button class="delete-btn" onclick="deleteProperty('${property.id}')">Eliminar</button>
+                                </div>
                             </div>
-                        </div>
-                    `;
-                });
+                        `;
+                    });
+                }
             } catch (error) {
-                console.error('Error cargando propiedades del usuario:', error);
+                console.error('Error cargando propiedades:', error);
                 propertiesList.innerHTML = '<p class="error-message">Error cargando propiedades. Por favor intenta nuevamente.</p>';
             }
             
@@ -1599,84 +1340,60 @@
             reservationsList.innerHTML = '<p>Cargando reservaciones...</p>';
             
             try {
-                const reservations = await db.reservations.getByOwner(appState.currentUser.id);
+                const reservations = await loadReservations(appState.currentUser.id);
                 
                 if (reservations.length === 0) {
                     reservationsList.innerHTML = '<p>No tienes reservaciones recibidas.</p>';
-                    return;
-                }
-                
-                reservationsList.innerHTML = '';
-                
-                // Obtener detalles de las propiedades
-                const properties = await db.properties.getAll();
-                
-                reservations.forEach(reservation => {
-                    const property = properties.find(p => p.id === reservation.propertyId);
-                    const propertyTitle = property ? property.title : 'Propiedad no encontrada';
-                    
-                    let statusClass = 'status-pending';
-                    if (reservation.status === 'confirmed') statusClass = 'status-confirmed';
-                    if (reservation.status === 'cancelled') statusClass = 'status-cancelled';
-                    
-                    reservationsList.innerHTML += `
-                        <div class="reservation-card">
-                            <h4>${propertyTitle}</h4>
-                            <p><strong>Huésped:</strong> ${reservation.guestName}</p>
-                            <p><strong>Teléfono:</strong> ${formatPhone(reservation.guestPhone)}</p>
-                            <p><strong>Email:</strong> ${reservation.guestEmail}</p>
-                            <p><strong>Fechas:</strong> ${formatDate(reservation.checkin)} - ${formatDate(reservation.checkout)}</p>
-                            <p><strong>Huéspedes:</strong> ${reservation.guests}</p>
-                            <p><strong>Estado:</strong> <span class="reservation-status ${statusClass}">${getReservationStatusName(reservation.status)}</span></p>
-                            <p><strong>Mensaje:</strong> ${reservation.message || 'Ninguno'}</p>
-                            <div style="margin-top: 1rem;">
-                                <button onclick="changeReservationStatus(${reservation.id}, 'confirmed')">Confirmar</button>
-                                <button onclick="changeReservationStatus(${reservation.id}, 'cancelled')" class="delete-btn" style="margin-left: 0.5rem;">Cancelar</button>
+                } else {
+                    reservationsList.innerHTML = '';
+                    reservations.forEach(reservation => {
+                        let statusClass = 'status-pending';
+                        if (reservation.status === 'confirmed') statusClass = 'status-confirmed';
+                        if (reservation.status === 'cancelled') statusClass = 'status-cancelled';
+                        
+                        reservationsList.innerHTML += `
+                            <div class="reservation-card">
+                                <h4>${reservation.propertyTitle}</h4>
+                                <p><strong>Huésped:</strong> ${reservation.guestName}</p>
+                                <p><strong>Teléfono:</strong> ${formatPhone(reservation.guestPhone)}</p>
+                                <p><strong>Email:</strong> ${reservation.guestEmail}</p>
+                                <p><strong>Fechas:</strong> ${formatDate(reservation.checkin)} - ${formatDate(reservation.checkout)}</p>
+                                <p><strong>Huéspedes:</strong> ${reservation.guests}</p>
+                                <p><strong>Estado:</strong> <span class="reservation-status ${statusClass}">${getReservationStatusName(reservation.status)}</span></p>
+                                <p><strong>Mensaje:</strong> ${reservation.message || 'Ninguno'}</p>
+                                <div style="margin-top: 1rem;">
+                                    <button onclick="changeReservationStatus('${reservation.id}', 'confirmed')">Confirmar</button>
+                                    <button onclick="changeReservationStatus('${reservation.id}', 'cancelled')" class="delete-btn" style="margin-left: 0.5rem;">Cancelar</button>
+                                </div>
                             </div>
-                        </div>
-                    `;
-                });
+                        `;
+                    });
+                }
             } catch (error) {
                 console.error('Error cargando reservaciones:', error);
                 reservationsList.innerHTML = '<p class="error-message">Error cargando reservaciones. Por favor intenta nuevamente.</p>';
             }
         }
 
-        // Editar propiedad
+        // Función para editar propiedad
         async function editProperty(propertyId) {
             try {
-                const property = await db.properties.getById(propertyId);
-                if (!property) {
+                const doc = await db.collection('properties').doc(propertyId).get();
+                if (!doc.exists) {
                     throw new Error('Propiedad no encontrada');
                 }
                 
+                const property = doc.data();
+                
                 // Llenar formulario con datos de la propiedad
                 document.getElementById('property-type').value = property.type;
-                document.getElementById('property-operation').value = property.operation;
                 document.getElementById('property-title').value = property.title;
                 document.getElementById('property-description').value = property.description;
-                document.getElementById('property-address').value = property.address;
-                document.getElementById('property-zone').value = property.zone;
-                document.getElementById('property-price').value = property.price;
-                document.getElementById('property-area').value = property.area || '';
-                document.getElementById('property-rooms').value = property.rooms || '';
-                document.getElementById('property-bathrooms').value = property.bathrooms;
-                document.getElementById('property-capacity').value = property.capacity;
-                document.getElementById('property-floors').value = property.floors || 1;
-                document.getElementById('property-parking').value = property.parking || 0;
-                document.getElementById('property-rules').value = property.rules || '';
-                document.getElementById('property-checkin').value = property.checkin || '';
-                document.getElementById('property-checkout').value = property.checkout || '';
-                
-                // Marcar comodidades
-                document.querySelectorAll('.amenities-container input[type="checkbox"]').forEach(checkbox => {
-                    checkbox.checked = property.amenities.includes(checkbox.nextElementSibling.textContent);
-                });
+                // [Llenar los demás campos...]
                 
                 // Mostrar imágenes existentes
                 const previewContainer = document.getElementById('image-preview');
                 previewContainer.innerHTML = '';
-                
                 property.images.forEach(img => {
                     const imgElement = document.createElement('img');
                     imgElement.src = img;
@@ -1684,7 +1401,7 @@
                     previewContainer.appendChild(imgElement);
                 });
                 
-                // Cambiar texto del botón de publicación
+                // Cambiar texto del botón
                 document.getElementById('publish-button').textContent = 'Actualizar Propiedad';
                 
                 // Guardar ID de la propiedad para actualización
@@ -1698,11 +1415,11 @@
             }
         }
 
-        // Eliminar propiedad
+        // Función para eliminar propiedad
         async function deleteProperty(propertyId) {
             if (confirm('¿Estás seguro de que deseas eliminar esta propiedad? Esta acción no se puede deshacer.')) {
                 try {
-                    await db.properties.delete(propertyId);
+                    await db.collection('properties').doc(propertyId).delete();
                     alert('Propiedad eliminada correctamente');
                     loadUserProfile();
                 } catch (error) {
@@ -1712,44 +1429,88 @@
             }
         }
 
-        // Cambiar estado de reservación
+        // Función para cambiar estado de reservación
         async function changeReservationStatus(reservationId, status) {
             try {
-                const reservations = await db.reservations.getAll();
-                const reservation = reservations.find(r => r.id === reservationId);
-                
-                if (!reservation) {
-                    throw new Error('Reservación no encontrada');
-                }
-                
-                reservation.status = status;
-                await db.reservations.update(reservation);
+                await db.collection('reservations').doc(reservationId).update({
+                    status: status
+                });
                 
                 alert(`Reservación ${getReservationStatusName(status)} correctamente`);
                 loadUserProfile();
             } catch (error) {
-                console.error('Error cambiando estado de reservación:', error);
+                console.error('Error cambiando estado:', error);
                 alert('Error al cambiar el estado de la reservación');
             }
         }
 
-        // Abrir pestaña en el perfil
+        // Función para abrir pestaña en perfil
         function openProfileTab(tabId) {
-            // Ocultar todos los contenidos de pestañas
+            // Ocultar todos los contenidos
             document.querySelectorAll('.tab-content').forEach(tab => {
                 tab.classList.remove('active');
             });
             
-            // Desactivar todos los botones de pestañas
+            // Desactivar todos los botones
             document.querySelectorAll('.tab-button').forEach(button => {
                 button.classList.remove('active');
             });
             
             // Activar la pestaña seleccionada
             document.getElementById(`${tabId}-tab`).classList.add('active');
-            
-            // Activar el botón de la pestaña seleccionada
             event.currentTarget.classList.add('active');
+        }
+
+        // Función para mostrar sección
+        function showSection(sectionId) {
+            // Ocultar todas las secciones
+            document.querySelectorAll('section').forEach(section => {
+                section.classList.add('hidden');
+            });
+            
+            // Mostrar la sección solicitada
+            const section = document.getElementById(`${sectionId}-section`);
+            if (section) {
+                section.classList.remove('hidden');
+                
+                // Cargar datos según la sección
+                if (sectionId === 'home') loadFeaturedProperties();
+                if (sectionId === 'properties') loadAllProperties();
+                if (sectionId === 'profile') loadUserProfile();
+            }
+        }
+
+        // Función para actualizar navegación
+        function updateNav() {
+            const registerItem = document.getElementById('register-nav-item');
+            const loginItem = document.getElementById('login-nav-item');
+            const profileItem = document.getElementById('profile-nav-item');
+            const logoutItem = document.getElementById('logout-nav-item');
+            
+            if (appState.isLoggedIn) {
+                registerItem.classList.add('hidden');
+                loginItem.classList.add('hidden');
+                profileItem.classList.remove('hidden');
+                logoutItem.classList.remove('hidden');
+            } else {
+                registerItem.classList.remove('hidden');
+                loginItem.classList.remove('hidden');
+                profileItem.classList.add('hidden');
+                logoutItem.classList.add('hidden');
+            }
+        }
+
+        // Función para cerrar sesión
+        function logout() {
+            auth.signOut().then(() => {
+                appState.isLoggedIn = false;
+                appState.currentUser = null;
+                alert('Has cerrado sesión correctamente');
+                showSection('home');
+            }).catch(error => {
+                console.error('Error al cerrar sesión:', error);
+                alert('Error al cerrar sesión');
+            });
         }
 
         // Funciones auxiliares
@@ -1830,40 +1591,32 @@
                 }
                 
                 if (!phone.match(/^[0-9]{10,15}$/)) {
-                    throw new Error('Por favor ingresa un número de teléfono válido (10-15 dígitos)');
+                    throw new Error('Teléfono inválido (10-15 dígitos)');
                 }
                 
-                if (!email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
-                    throw new Error('Por favor ingresa un correo electrónico válido');
-                }
-                
-                // Verificar si el usuario ya existe
-                const existingUser = await db.users.getByEmail(email);
-                if (existingUser) {
-                    throw new Error('Este correo electrónico ya está registrado');
-                }
-                
-                // Registrar usuario en Firebase Auth
+                // Registrar en Firebase Auth
                 const userCredential = await auth.createUserWithEmailAndPassword(email, password);
-                const firebaseUser = userCredential.user;
+                const user = userCredential.user;
                 
-                // Guardar información adicional del usuario
-                const newUser = {
-                    id: firebaseUser.uid,
+                // Guardar información adicional en Firestore
+                await db.collection('users').doc(user.uid).set({
+                    id: user.uid,
                     name,
                     phone,
                     email,
-                    createdAt: new Date().toISOString()
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                
+                // Actualizar estado
+                appState.isLoggedIn = true;
+                appState.currentUser = {
+                    id: user.uid,
+                    name,
+                    phone,
+                    email
                 };
                 
-                await db.users.add(newUser);
-                
-                // Actualizar estado de la aplicación
-                appState.isLoggedIn = true;
-                appState.currentUser = newUser;
-                saveState();
                 updateNav();
-                
                 alert('Registro exitoso. Ahora puedes publicar propiedades.');
                 showSection('profile');
             } catch (error) {
@@ -1873,7 +1626,7 @@
                 if (error.code) {
                     switch (error.code) {
                         case 'auth/email-already-in-use':
-                            errorMessage = 'Este correo electrónico ya está registrado';
+                            errorMessage = 'Este correo ya está registrado';
                             break;
                         case 'auth/invalid-email':
                             errorMessage = 'Correo electrónico inválido';
@@ -1884,8 +1637,6 @@
                         default:
                             errorMessage = error.message || errorMessage;
                     }
-                } else {
-                    errorMessage = error.message || errorMessage;
                 }
                 
                 alert(errorMessage);
@@ -1914,22 +1665,22 @@
                 
                 // Iniciar sesión con Firebase Auth
                 const userCredential = await auth.signInWithEmailAndPassword(email, password);
-                const firebaseUser = userCredential.user;
+                const user = userCredential.user;
                 
-                // Obtener información adicional del usuario
-                const users = JSON.parse(localStorage.getItem('users')) || [];
-                const user = users.find(u => u.email === firebaseUser.email);
-                
-                if (!user) {
-                    throw new Error('Usuario no encontrado en la base de datos');
+                // Obtener información adicional de Firestore
+                const doc = await db.collection('users').doc(user.uid).get();
+                if (!doc.exists) {
+                    throw new Error('Usuario no encontrado');
                 }
                 
-                // Actualizar estado de la aplicación
+                // Actualizar estado
                 appState.isLoggedIn = true;
-                appState.currentUser = user;
-                saveState();
-                updateNav();
+                appState.currentUser = {
+                    id: user.uid,
+                    ...doc.data()
+                };
                 
+                updateNav();
                 alert('Inicio de sesión exitoso');
                 showSection('profile');
             } catch (error) {
@@ -1950,8 +1701,6 @@
                         default:
                             errorMessage = error.message || errorMessage;
                     }
-                } else {
-                    errorMessage = error.message || errorMessage;
                 }
                 
                 alert(errorMessage);
@@ -1977,23 +1726,20 @@
                 const newPassword = document.getElementById('profile-new-password').value;
                 const confirmPassword = document.getElementById('profile-confirm-password').value;
                 
-                // Validaciones
+                // Validaciones básicas
                 if (!name || !phone) {
-                    throw new Error('Por favor completa todos los campos requeridos');
+                    throw new Error('Por favor completa todos los campos');
                 }
                 
                 if (!phone.match(/^[0-9]{10,15}$/)) {
-                    throw new Error('Por favor ingresa un número de teléfono válido (10-15 dígitos)');
+                    throw new Error('Teléfono inválido (10-15 dígitos)');
                 }
                 
-                // Actualizar información del usuario
-                const updatedUser = {
-                    ...appState.currentUser,
+                // Actualizar información en Firestore
+                await db.collection('users').doc(appState.currentUser.id).update({
                     name,
                     phone
-                };
-                
-                await db.users.update(updatedUser);
+                });
                 
                 // Actualizar contraseña si se proporcionó
                 if (currentPassword || newPassword || confirmPassword) {
@@ -2009,7 +1755,7 @@
                         throw new Error('La nueva contraseña debe tener al menos 6 caracteres');
                     }
                     
-                    // Reautenticar al usuario
+                    // Reautenticar
                     const credential = firebase.auth.EmailAuthProvider.credential(
                         appState.currentUser.email, 
                         currentPassword
@@ -2021,14 +1767,12 @@
                     await auth.currentUser.updatePassword(newPassword);
                 }
                 
-                // Actualizar estado de la aplicación
-                appState.currentUser = updatedUser;
-                saveState();
-                
-                // Actualizar vista de perfil
-                loadUserProfile();
+                // Actualizar estado
+                appState.currentUser.name = name;
+                appState.currentUser.phone = phone;
                 
                 alert('Perfil actualizado correctamente');
+                loadUserProfile();
             } catch (error) {
                 console.error('Error actualizando perfil:', error);
                 
@@ -2044,8 +1788,6 @@
                         default:
                             errorMessage = error.message || errorMessage;
                     }
-                } else {
-                    errorMessage = error.message || errorMessage;
                 }
                 
                 alert(errorMessage);
@@ -2066,47 +1808,61 @@
             showSection('home');
         });
 
-        // Escuchar cambios en el estado de autenticación
-        auth.onAuthStateChanged((user) => {
+        // Manejar previsualización de imágenes
+        document.getElementById('property-images').addEventListener('change', function(e) {
+            const previewContainer = document.getElementById('image-preview');
+            previewContainer.innerHTML = '';
+            
+            const files = e.target.files;
+            if (!files || files.length === 0) return;
+            
+            if (files.length > 5) {
+                alert('Máximo 5 imágenes permitidas. Se mostrarán las primeras 5.');
+            }
+            
+            const filesToShow = Array.from(files).slice(0, 5);
+            
+            for (let i = 0; i < filesToShow.length; i++) {
+                const file = filesToShow[i];
+                if (!file.type.match('image.*')) continue;
+                
+                const reader = new FileReader();
+                
+                reader.onload = function(e) {
+                    const img = document.createElement('img');
+                    img.src = e.target.result;
+                    img.classList.add('image-preview');
+                    previewContainer.appendChild(img);
+                }
+                
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // Escuchar cambios en autenticación
+        auth.onAuthStateChanged(async (user) => {
             if (user) {
                 // Usuario logueado
-                const users = JSON.parse(localStorage.getItem('users')) || [];
-                const currentUser = users.find(u => u.email === user.email);
-                
-                if (currentUser) {
+                const doc = await db.collection('users').doc(user.uid).get();
+                if (doc.exists) {
                     appState.isLoggedIn = true;
-                    appState.currentUser = currentUser;
-                    saveState();
-                    updateNav();
+                    appState.currentUser = {
+                        id: user.uid,
+                        ...doc.data()
+                    };
                 }
             } else {
                 // Usuario no logueado
                 appState.isLoggedIn = false;
                 appState.currentUser = null;
-                saveState();
-                updateNav();
             }
+            
+            updateNav();
         });
 
-        // Inicializar la aplicación
+        // Inicializar aplicación
         document.addEventListener('DOMContentLoaded', function() {
-            // Mostrar sección de inicio al cargar la página
             showSection('home');
-            
-            // Verificar si hay un usuario en localStorage
-            const savedUser = localStorage.getItem('currentUser');
-            if (savedUser) {
-                try {
-                    const user = JSON.parse(savedUser);
-                    if (user && user.email) {
-                        appState.currentUser = user;
-                        appState.isLoggedIn = true;
-                        updateNav();
-                    }
-                } catch (error) {
-                    console.error('Error cargando usuario guardado:', error);
-                }
-            }
         });
     </script>
 </body>

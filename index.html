@@ -294,6 +294,21 @@
             margin: 0.5rem 0;
             color: #555;
         }
+
+        .progress-bar {
+            width: 100%;
+            background-color: #e0e0e0;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+
+        .progress-bar-fill {
+            height: 10px;
+            background-color: #0056b3;
+            border-radius: 4px;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
     </style>
 </head>
 <body>
@@ -413,8 +428,11 @@
                     </div>
                     
                     <div class="form-group">
-                        <label for="property-images">Fotos de la propiedad (Múltiples):</label>
+                        <label for="property-images">Fotos de la propiedad (Máx. 10):</label>
                         <input type="file" id="property-images" multiple accept="image/*">
+                        <div class="progress-bar hidden" id="upload-progress">
+                            <div class="progress-bar-fill" id="progress-bar-fill"></div>
+                        </div>
                         <div class="image-preview-container" id="image-preview"></div>
                     </div>
                     
@@ -870,73 +888,159 @@
             }
         }
 
-        // Subir imágenes a Firebase Storage con manejo mejorado
-        async function uploadImages(files, propertyId) {
-            const uploadPromises = [];
-            const imageUrls = [];
-            
-            if (!files || files.length === 0) {
-                throw new Error('No se han seleccionado imágenes para subir');
-            }
-            
-            // Verificar autenticación
-            if (!appState.isLoggedIn) {
-                throw new Error('Debes iniciar sesión para subir imágenes');
-            }
-            
-            for (let i = 0; i < files.length; i++) {
-                const file = files[i];
-                
-                // Validar que sea una imagen
-                if (!file.type.match('image.*')) {
-                    console.warn(`El archivo ${file.name} no es una imagen y será omitido`);
-                    continue;
+        // Función para comprimir imágenes antes de subir
+        function compressImage(file) {
+            return new Promise((resolve) => {
+                if (file.size < 500000) { // No comprimir si ya es pequeño (menos de 500KB)
+                    resolve(file);
+                    return;
                 }
-                
-                // Generar un nombre de archivo seguro
-                const fileExtension = file.name.split('.').pop();
-                const safeFileName = `img_${Date.now()}_${i}.${fileExtension}`;
-                const storagePath = `properties/${propertyId}/${safeFileName}`;
-                const storageRef = storage.ref(storagePath);
-                
+
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    const img = new Image();
+                    img.src = event.target.result;
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        const MAX_WIDTH = 1024;
+                        const MAX_HEIGHT = 1024;
+                        let width = img.width;
+                        let height = img.height;
+
+                        // Redimensionar manteniendo proporciones
+                        if (width > height) {
+                            if (width > MAX_WIDTH) {
+                                height *= MAX_WIDTH / width;
+                                width = MAX_WIDTH;
+                            }
+                        } else {
+                            if (height > MAX_HEIGHT) {
+                                width *= MAX_HEIGHT / height;
+                                height = MAX_HEIGHT;
+                            }
+                        }
+
+                        canvas.width = width;
+                        canvas.height = height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, width, height);
+
+                        // Convertir a JPEG con calidad del 70%
+                        canvas.toBlob((blob) => {
+                            resolve(new File([blob], file.name, {
+                                type: 'image/jpeg',
+                                lastModified: Date.now()
+                            }));
+                        }, 'image/jpeg', 0.7);
+                    };
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        // Función mejorada para subir imágenes con reintentos
+        async function uploadWithRetry(file, path, metadata, maxRetries = 3) {
+            let lastError;
+            
+            for (let i = 0; i < maxRetries; i++) {
                 try {
-                    const uploadTask = storageRef.put(file);
+                    const storageRef = storage.ref(path);
+                    const uploadTask = storageRef.put(file, metadata);
                     
-                    const downloadURL = await new Promise((resolve, reject) => {
+                    return await new Promise((resolve, reject) => {
+                        // Configurar timeout de 30 segundos
+                        const uploadTimeout = setTimeout(() => {
+                            uploadTask.cancel();
+                            reject(new Error('Tiempo de espera agotado al subir la imagen'));
+                        }, 30000);
+
                         uploadTask.on(
                             'state_changed',
                             (snapshot) => {
-                                // Opcional: Mostrar progreso
+                                // Actualizar barra de progreso
                                 const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-                                console.log(`Subiendo imagen: ${progress.toFixed(0)}%`);
+                                document.getElementById('progress-bar-fill').style.width = `${progress}%`;
                             },
                             (error) => {
-                                console.error('Error subiendo imagen:', error);
+                                clearTimeout(uploadTimeout);
                                 reject(error);
                             },
                             async () => {
+                                clearTimeout(uploadTimeout);
                                 try {
                                     const url = await uploadTask.snapshot.ref.getDownloadURL();
                                     resolve(url);
                                 } catch (error) {
-                                    console.error('Error obteniendo URL:', error);
                                     reject(error);
                                 }
                             }
                         );
                     });
-                    
-                    imageUrls.push(downloadURL);
                 } catch (error) {
-                    console.error(`Error subiendo imagen ${file.name}:`, error);
-                    throw new Error(`Error al subir la imagen ${file.name}: ${error.message}`);
+                    lastError = error;
+                    console.warn(`Intento ${i + 1} fallido, reintentando...`, error);
+                    await new Promise(resolve => setTimeout(resolve, 2000 * (i + 1))); // Espera exponencial
                 }
             }
             
-            if (imageUrls.length === 0) {
-                throw new Error('No se pudieron subir las imágenes. Asegúrate de que son archivos de imagen válidos.');
+            throw lastError || new Error('Falló la subida después de múltiples intentos');
+        }
+
+        // Función principal para subir imágenes
+        async function uploadImages(files, propertyId) {
+            if (!files || files.length === 0) {
+                throw new Error('No se han seleccionado imágenes para subir');
             }
             
+            if (!appState.isLoggedIn) {
+                throw new Error('Debes iniciar sesión para subir imágenes');
+            }
+
+            // Limitar a 10 imágenes máximo
+            const filesToUpload = Array.from(files).slice(0, 10);
+            const imageUrls = [];
+
+            // Mostrar barra de progreso
+            document.getElementById('upload-progress').classList.remove('hidden');
+            document.getElementById('progress-bar-fill').style.width = '0%';
+
+            for (const file of filesToUpload) {
+                if (!file.type.match('image.*')) {
+                    console.warn(`El archivo ${file.name} no es una imagen y será omitido`);
+                    continue;
+                }
+
+                try {
+                    // Comprimir imagen antes de subir
+                    const compressedFile = await compressImage(file);
+                    
+                    // Generar nombre de archivo único
+                    const fileExtension = file.name.split('.').pop();
+                    const safeFileName = `img_${Date.now()}_${Math.random().toString(36).substring(2, 8)}.${fileExtension}`;
+                    const storagePath = `properties/${propertyId}/${safeFileName}`;
+                    
+                    // Configurar metadata
+                    const metadata = {
+                        contentType: file.type,
+                        cacheControl: 'public, max-age=31536000' // 1 año de caché
+                    };
+
+                    // Subir con reintentos
+                    const url = await uploadWithRetry(compressedFile, storagePath, metadata);
+                    imageUrls.push(url);
+                } catch (error) {
+                    console.error(`Error subiendo ${file.name}:`, error);
+                    throw new Error(`Error al subir ${file.name}: ${error.message}`);
+                }
+            }
+
+            // Ocultar barra de progreso
+            document.getElementById('upload-progress').classList.add('hidden');
+
+            if (imageUrls.length === 0) {
+                throw new Error('No se pudieron subir imágenes válidas');
+            }
+
             return imageUrls;
         }
 
@@ -950,16 +1054,15 @@
             publishButton.innerHTML = '<span class="loading"></span> Publicando...';
             
             try {
-                // Verificar autenticación
-                if (!appState.isLoggedIn) {
-                    throw new Error('Debes iniciar sesión para publicar propiedades');
+                // Verificar conexión a internet
+                if (!navigator.onLine) {
+                    throw new Error('No hay conexión a internet. Por favor verifica tu conexión.');
                 }
-                
+
                 const propertyId = Date.now();
                 const imageFiles = document.getElementById('property-images').files;
                 let imageUrls = [];
                 
-                // Subir imágenes si hay archivos seleccionados
                 if (imageFiles.length > 0) {
                     imageUrls = await uploadImages(imageFiles, propertyId);
                 } else {
@@ -1043,8 +1146,11 @@
             const files = e.target.files;
             if (!files || files.length === 0) return;
             
-            for (let i = 0; i < files.length; i++) {
-                const file = files[i];
+            // Limitar a 10 imágenes
+            const filesToShow = Array.from(files).slice(0, 10);
+            
+            for (let i = 0; i < filesToShow.length; i++) {
+                const file = filesToShow[i];
                 if (!file.type.match('image.*')) continue;
                 
                 const reader = new FileReader();

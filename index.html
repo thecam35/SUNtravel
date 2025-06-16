@@ -446,96 +446,6 @@
             flex: 1;
             margin-bottom: 0;
         }
-
-        /* Estilos para el calendario de disponibilidad */
-        .availability-options {
-            margin-bottom: 1rem;
-        }
-
-        .availability-options label {
-            display: block;
-            margin-bottom: 0.5rem;
-            cursor: pointer;
-        }
-
-        .calendar-container {
-            margin-top: 1rem;
-            border: 1px solid #ddd;
-            padding: 1rem;
-            border-radius: 8px;
-        }
-
-        .calendar-navigation {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1rem;
-        }
-
-        .calendar-grid {
-            display: grid;
-            grid-template-columns: repeat(7, 1fr);
-            gap: 5px;
-        }
-
-        .calendar-day-header {
-            text-align: center;
-            font-weight: bold;
-            padding: 0.5rem;
-            background: #f0f0f0;
-        }
-
-        .calendar-day {
-            text-align: center;
-            padding: 0.5rem;
-            border: 1px solid #ddd;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .calendar-day:hover {
-            background: #f0f8ff;
-        }
-
-        .calendar-day.available {
-            background: white;
-        }
-
-        .calendar-day.unavailable {
-            background: #333;
-            color: white;
-        }
-
-        .calendar-day.other-month {
-            color: #ccc;
-            background: #f9f9f9;
-        }
-
-        .calendar-day.today {
-            border: 2px solid #0056b3;
-        }
-
-        .availability-note {
-            margin-top: 1rem;
-            font-size: 0.9em;
-            color: #666;
-        }
-
-        .availability-display {
-            margin-top: 1rem;
-            padding: 1rem;
-            background: #f5f5f5;
-            border-radius: 5px;
-        }
-
-        .availability-display h4 {
-            margin-top: 0;
-            color: #0056b3;
-        }
-
-        .availability-summary {
-            margin-top: 0.5rem;
-        }
     </style>
 </head>
 <body>
@@ -760,32 +670,30 @@
                         <textarea id="property-rules" rows="3" placeholder="Ej: No se permiten fiestas, No mascotas, No fumar, etc."></textarea>
                     </div>
                     
-                    <div class="form-group">
-                        <label for="property-checkin">Horario de check-in:</label>
-                        <input type="text" id="property-checkin" placeholder="Ej: 15:00 - 20:00">
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="property-checkout">Horario de check-out:</label>
-                        <input type="text" id="property-checkout" placeholder="Ej: Antes de las 11:00">
-                    </div>
-                    
-                    <h3>Disponibilidad</h3>
-                    <div class="form-group">
-                        <label>Selecciona los días no disponibles (reservados):</label>
-                        <div class="availability-options">
-                            <label><input type="radio" name="availability" value="all" checked> Todos los días disponibles</label>
-                            <label><input type="radio" name="availability" value="custom"> Personalizar disponibilidad</label>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="property-checkin">Horario de check-in:</label>
+                            <select id="property-checkin" required>
+                                <option value="">Seleccione...</option>
+                                <option value="12:00 - 15:00">12:00 PM - 3:00 PM</option>
+                                <option value="14:00 - 16:00">2:00 PM - 4:00 PM</option>
+                                <option value="15:00 - 18:00">3:00 PM - 6:00 PM</option>
+                                <option value="15:00 - 20:00">3:00 PM - 8:00 PM</option>
+                                <option value="Flexible">Horario flexible</option>
+                                <option value="Otro">Otro (especificar en normas)</option>
+                            </select>
                         </div>
                         
-                        <div id="calendar-container" class="hidden">
-                            <div class="calendar-navigation">
-                                <button type="button" onclick="prevMonth()">←</button>
-                                <h4 id="current-month">Mes Actual</h4>
-                                <button type="button" onclick="nextMonth()">→</button>
-                            </div>
-                            <div class="calendar-grid" id="calendar-grid"></div>
-                            <p class="availability-note">Haz clic en los días para marcarlos como no disponibles (reservados)</p>
+                        <div class="form-group">
+                            <label for="property-checkout">Horario de check-out:</label>
+                            <select id="property-checkout" required>
+                                <option value="">Seleccione...</option>
+                                <option value="10:00">10:00 AM</option>
+                                <option value="11:00">11:00 AM</option>
+                                <option value="12:00">12:00 PM</option>
+                                <option value="Flexible">Horario flexible</option>
+                                <option value="Otro">Otro (especificar en normas)</option>
+                            </select>
                         </div>
                     </div>
                     
@@ -996,123 +904,6 @@
             isLoggedIn: false,
             currentUser: null
         };
-
-        // Variables para el calendario de disponibilidad
-        let currentDisplayedMonth = new Date().getMonth();
-        let currentDisplayedYear = new Date().getFullYear();
-        let selectedUnavailableDates = [];
-
-        // Función para renderizar el calendario
-        function renderCalendar(month, year) {
-            const calendarGrid = document.getElementById('calendar-grid');
-            const monthNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", 
-                               "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
-            
-            document.getElementById('current-month').textContent = `${monthNames[month]} ${year}`;
-            calendarGrid.innerHTML = '';
-            
-            // Encabezados de los días
-            const dayNames = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
-            dayNames.forEach(day => {
-                const dayElement = document.createElement('div');
-                dayElement.className = 'calendar-day-header';
-                dayElement.textContent = day;
-                calendarGrid.appendChild(dayElement);
-            });
-            
-            // Primer día del mes
-            const firstDay = new Date(year, month, 1);
-            // Último día del mes
-            const lastDay = new Date(year, month + 1, 0);
-            // Días del mes anterior a mostrar
-            const daysFromPrevMonth = firstDay.getDay();
-            // Total de días en el mes
-            const daysInMonth = lastDay.getDate();
-            // Días del próximo mes a mostrar
-            const totalCells = Math.ceil((daysFromPrevMonth + daysInMonth) / 7) * 7;
-            const daysFromNextMonth = totalCells - (daysFromPrevMonth + daysInMonth);
-            
-            // Días del mes anterior
-            const prevMonthLastDay = new Date(year, month, 0).getDate();
-            for (let i = 0; i < daysFromPrevMonth; i++) {
-                const dayElement = document.createElement('div');
-                dayElement.className = 'calendar-day other-month';
-                dayElement.textContent = prevMonthLastDay - daysFromPrevMonth + i + 1;
-                calendarGrid.appendChild(dayElement);
-            }
-            
-            // Días del mes actual
-            const today = new Date();
-            for (let i = 1; i <= daysInMonth; i++) {
-                const dayElement = document.createElement('div');
-                dayElement.className = 'calendar-day available';
-                dayElement.textContent = i;
-                
-                // Marcar como hoy si corresponde
-                if (i === today.getDate() && month === today.getMonth() && year === today.getFullYear()) {
-                    dayElement.classList.add('today');
-                }
-                
-                // Verificar si está seleccionado como no disponible
-                const dateStr = `${year}-${(month + 1).toString().padStart(2, '0')}-${i.toString().padStart(2, '0')}`;
-                if (selectedUnavailableDates.includes(dateStr)) {
-                    dayElement.classList.remove('available');
-                    dayElement.classList.add('unavailable');
-                }
-                
-                // Agregar evento de clic
-                dayElement.addEventListener('click', function() {
-                    toggleDateAvailability(dayElement, i, month, year);
-                });
-                
-                calendarGrid.appendChild(dayElement);
-            }
-            
-            // Días del próximo mes
-            for (let i = 1; i <= daysFromNextMonth; i++) {
-                const dayElement = document.createElement('div');
-                dayElement.className = 'calendar-day other-month';
-                dayElement.textContent = i;
-                calendarGrid.appendChild(dayElement);
-            }
-        }
-
-        // Función para alternar disponibilidad de una fecha
-        function toggleDateAvailability(dayElement, day, month, year) {
-            const dateStr = `${year}-${(month + 1).toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
-            
-            if (dayElement.classList.contains('available')) {
-                // Marcar como no disponible
-                dayElement.classList.remove('available');
-                dayElement.classList.add('unavailable');
-                selectedUnavailableDates.push(dateStr);
-            } else if (dayElement.classList.contains('unavailable')) {
-                // Marcar como disponible
-                dayElement.classList.remove('unavailable');
-                dayElement.classList.add('available');
-                selectedUnavailableDates = selectedUnavailableDates.filter(d => d !== dateStr);
-            }
-        }
-
-        // Función para cambiar al mes anterior
-        function prevMonth() {
-            currentDisplayedMonth--;
-            if (currentDisplayedMonth < 0) {
-                currentDisplayedMonth = 11;
-                currentDisplayedYear--;
-            }
-            renderCalendar(currentDisplayedMonth, currentDisplayedYear);
-        }
-
-        // Función para cambiar al mes siguiente
-        function nextMonth() {
-            currentDisplayedMonth++;
-            if (currentDisplayedMonth > 11) {
-                currentDisplayedMonth = 0;
-                currentDisplayedYear++;
-            }
-            renderCalendar(currentDisplayedMonth, currentDisplayedYear);
-        }
 
         // Función para comprimir imágenes
         async function compressImage(file) {
@@ -1421,22 +1212,6 @@
                     amenitiesHTML += `</div>`;
                 }
                 
-                // Mostrar disponibilidad si existe
-                let availabilityHTML = '';
-                if (property.unavailableDates && property.unavailableDates.length > 0) {
-                    availabilityHTML = `
-                        <div class="availability-display">
-                            <h4>Disponibilidad</h4>
-                            <div class="availability-summary">
-                                <p>Fechas no disponibles (reservadas):</p>
-                                <ul>
-                                    ${property.unavailableDates.map(date => `<li>${formatDate(date)}</li>`).join('')}
-                                </ul>
-                            </div>
-                        </div>
-                    `;
-                }
-                
                 detailContent.innerHTML = `
                     <h2>${property.title}</h2>
                     <img id="main-property-image" src="${property.images[0]}" class="property-detail-image" alt="Imagen principal de ${property.title}">
@@ -1461,8 +1236,6 @@
                     
                     <h3>Comodidades</h3>
                     ${amenitiesHTML || '<p>No se han especificado comodidades.</p>'}
-                    
-                    ${availabilityHTML}
                     
                     <h3>Normas del alojamiento</h3>
                     <div class="property-description">${property.rules || 'No se han especificado normas especiales.'}</div>
@@ -1752,20 +1525,6 @@
                 document.getElementById('property-checkin').value = property.checkin || '';
                 document.getElementById('property-checkout').value = property.checkout || '';
                 
-                // Configurar disponibilidad
-                if (property.unavailableDates && property.unavailableDates.length > 0) {
-                    document.querySelector('input[name="availability"][value="custom"]').checked = true;
-                    document.getElementById('calendar-container').classList.remove('hidden');
-                    selectedUnavailableDates = property.unavailableDates;
-                } else {
-                    document.querySelector('input[name="availability"][value="all"]').checked = true;
-                    document.getElementById('calendar-container').classList.add('hidden');
-                    selectedUnavailableDates = [];
-                }
-                
-                // Renderizar calendario con fechas no disponibles
-                renderCalendar(currentDisplayedMonth, currentDisplayedYear);
-                
                 // Marcar comodidades
                 if (property.amenities) {
                     property.amenities.forEach(amenity => {
@@ -1890,8 +1649,6 @@
                             document.getElementById('publish-form').reset();
                             document.getElementById('image-preview').innerHTML = '';
                             document.getElementById('publish-button').textContent = 'Publicar Propiedad';
-                            selectedUnavailableDates = [];
-                            renderCalendar(new Date().getMonth(), new Date().getFullYear());
                         }
                     } else {
                         loginMessage.classList.remove('hidden');
@@ -1986,20 +1743,6 @@
             const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
             return new Date(dateString).toLocaleDateString('es-ES', options);
         }
-
-        // Manejar cambios en la opción de disponibilidad
-        document.querySelectorAll('input[name="availability"]').forEach(radio => {
-            radio.addEventListener('change', function() {
-                const calendarContainer = document.getElementById('calendar-container');
-                if (this.value === 'custom') {
-                    calendarContainer.classList.remove('hidden');
-                    renderCalendar(currentDisplayedMonth, currentDisplayedYear);
-                } else {
-                    calendarContainer.classList.add('hidden');
-                    selectedUnavailableDates = [];
-                }
-            });
-        });
 
         // Manejar registro de usuario
         document.getElementById('register-form').addEventListener('submit', async function(e) {
@@ -2243,10 +1986,6 @@
                     }
                 }
                 
-                // Obtener fechas no disponibles
-                const availabilityOption = document.querySelector('input[name="availability"]:checked').value;
-                const unavailableDates = availabilityOption === 'all' ? [] : selectedUnavailableDates;
-                
                 // Crear objeto de propiedad
                 const propertyData = {
                     type,
@@ -2263,8 +2002,7 @@
                     amenities,
                     ownerId: appState.currentUser.id,
                     phone: appState.currentUser.phone,
-                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                    unavailableDates
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
                 };
                 
                 // Agregar campos opcionales si existen
@@ -2461,8 +2199,6 @@
         // Inicializar aplicación
         document.addEventListener('DOMContentLoaded', function() {
             showSection('home');
-            // Inicializar calendario
-            renderCalendar(currentDisplayedMonth, currentDisplayedYear);
         });
     </script>
 </body>

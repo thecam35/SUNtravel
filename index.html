@@ -1387,9 +1387,30 @@
                 
                 // Llenar formulario con datos de la propiedad
                 document.getElementById('property-type').value = property.type;
+                document.getElementById('property-operation').value = property.operation;
                 document.getElementById('property-title').value = property.title;
                 document.getElementById('property-description').value = property.description;
-                // [Llenar los demás campos...]
+                document.getElementById('property-address').value = property.address;
+                document.getElementById('property-zone').value = property.zone;
+                document.getElementById('property-price').value = property.price;
+                document.getElementById('property-area').value = property.area || '';
+                document.getElementById('property-rooms').value = property.rooms || '';
+                document.getElementById('property-bathrooms').value = property.bathrooms;
+                document.getElementById('property-capacity').value = property.capacity;
+                document.getElementById('property-floors').value = property.floors || 1;
+                document.getElementById('property-parking').value = property.parking || 0;
+                document.getElementById('property-rules').value = property.rules || '';
+                document.getElementById('property-checkin').value = property.checkin || '';
+                document.getElementById('property-checkout').value = property.checkout || '';
+                
+                // Marcar comodidades
+                if (property.amenities) {
+                    property.amenities.forEach(amenity => {
+                        const amenityId = 'amenity-' + amenity.toLowerCase().replace(/ /g, '-');
+                        const checkbox = document.getElementById(amenityId);
+                        if (checkbox) checkbox.checked = true;
+                    });
+                }
                 
                 // Mostrar imágenes existentes
                 const previewContainer = document.getElementById('image-preview');
@@ -1472,6 +1493,26 @@
             const section = document.getElementById(`${sectionId}-section`);
             if (section) {
                 section.classList.remove('hidden');
+                
+                // Mostrar/ocultar formulario de publicación según login
+                if (sectionId === 'publish') {
+                    const loginMessage = document.getElementById('publish-login-message');
+                    const formContainer = document.getElementById('publish-form-container');
+                    
+                    if (appState.isLoggedIn) {
+                        loginMessage.classList.add('hidden');
+                        formContainer.classList.remove('hidden');
+                        // Resetear formulario si no estamos editando
+                        if (!document.getElementById('publish-form').dataset.propertyId) {
+                            document.getElementById('publish-form').reset();
+                            document.getElementById('image-preview').innerHTML = '';
+                            document.getElementById('publish-button').textContent = 'Publicar Propiedad';
+                        }
+                    } else {
+                        loginMessage.classList.remove('hidden');
+                        formContainer.classList.add('hidden');
+                    }
+                }
                 
                 // Cargar datos según la sección
                 if (sectionId === 'home') loadFeaturedProperties();
@@ -1613,7 +1654,8 @@
                     id: user.uid,
                     name,
                     phone,
-                    email
+                    email,
+                    createdAt: new Date()
                 };
                 
                 updateNav();
@@ -1673,11 +1715,16 @@
                     throw new Error('Usuario no encontrado');
                 }
                 
+                const userData = doc.data();
+                
                 // Actualizar estado
                 appState.isLoggedIn = true;
                 appState.currentUser = {
                     id: user.uid,
-                    ...doc.data()
+                    name: userData.name,
+                    phone: userData.phone,
+                    email: userData.email,
+                    createdAt: userData.createdAt.toDate()
                 };
                 
                 updateNav();
@@ -1707,6 +1754,146 @@
             } finally {
                 loginButton.disabled = false;
                 loginButton.textContent = originalText;
+            }
+        });
+
+        // Manejar publicación de propiedad
+        document.getElementById('publish-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const publishButton = document.getElementById('publish-button');
+            const originalText = publishButton.textContent;
+            publishButton.disabled = true;
+            publishButton.innerHTML = '<span class="loading"></span> Publicando...';
+            
+            try {
+                if (!appState.isLoggedIn) {
+                    throw new Error('Debes iniciar sesión para publicar una propiedad');
+                }
+                
+                // Obtener valores del formulario
+                const type = document.getElementById('property-type').value;
+                const operation = document.getElementById('property-operation').value;
+                const title = document.getElementById('property-title').value;
+                const description = document.getElementById('property-description').value;
+                const address = document.getElementById('property-address').value;
+                const zone = document.getElementById('property-zone').value;
+                const price = parseFloat(document.getElementById('property-price').value);
+                const area = document.getElementById('property-area').value ? parseInt(document.getElementById('property-area').value) : null;
+                const rooms = document.getElementById('property-rooms').value ? parseInt(document.getElementById('property-rooms').value) : null;
+                const bathrooms = parseInt(document.getElementById('property-bathrooms').value);
+                const capacity = parseInt(document.getElementById('property-capacity').value);
+                const floors = document.getElementById('property-floors').value ? parseInt(document.getElementById('property-floors').value) : 1;
+                const parking = document.getElementById('property-parking').value ? parseInt(document.getElementById('property-parking').value) : 0;
+                const rules = document.getElementById('property-rules').value;
+                const checkin = document.getElementById('property-checkin').value;
+                const checkout = document.getElementById('property-checkout').value;
+                
+                // Obtener comodidades seleccionadas
+                const amenities = [];
+                if (document.getElementById('amenity-wifi').checked) amenities.push('Wi-Fi');
+                if (document.getElementById('amenity-air').checked) amenities.push('Aire acondicionado');
+                if (document.getElementById('amenity-pool').checked) amenities.push('Piscina');
+                if (document.getElementById('amenity-kitchen').checked) amenities.push('Cocina equipada');
+                if (document.getElementById('amenity-tv').checked) amenities.push('Televisión');
+                if (document.getElementById('amenity-laundry').checked) amenities.push('Lavadora');
+                if (document.getElementById('amenity-gym').checked) amenities.push('Gimnasio');
+                if (document.getElementById('amenity-elevator').checked) amenities.push('Ascensor');
+                if (document.getElementById('amenity-security').checked) amenities.push('Seguridad 24/7');
+                if (document.getElementById('amenity-beach').checked) amenities.push('Acceso a playa');
+                if (document.getElementById('amenity-terrace').checked) amenities.push('Terraza');
+                if (document.getElementById('amenity-breakfast').checked) amenities.push('Desayuno incluido');
+                
+                // Validaciones básicas
+                if (!type || !title || !description || !address || !zone || !price || !bathrooms || !capacity) {
+                    throw new Error('Por favor completa todos los campos requeridos');
+                }
+                
+                if (price <= 0) {
+                    throw new Error('El precio debe ser mayor a cero');
+                }
+                
+                // Obtener imágenes
+                const imageFiles = document.getElementById('property-images').files;
+                const existingImages = Array.from(document.getElementById('image-preview').children)
+                    .filter(img => img.tagName === 'IMG' && img.src.startsWith('data:image'))
+                    .map(img => img.src);
+                
+                // Si estamos editando y no hay nuevas imágenes, usar las existentes
+                let imagesToUse = existingImages;
+                const isEditing = this.dataset.propertyId;
+                
+                if (!isEditing && (!imageFiles || imageFiles.length === 0)) {
+                    throw new Error('Debes subir al menos una imagen de la propiedad');
+                }
+                
+                if (imageFiles && imageFiles.length > 0) {
+                    // Comprimir y convertir nuevas imágenes
+                    imagesToUse = [];
+                    for (let i = 0; i < imageFiles.length; i++) {
+                        const file = imageFiles[i];
+                        if (!file.type.match('image.*')) continue;
+                        
+                        let processedFile = file;
+                        if (file.size > 500000) { // 500KB
+                            processedFile = await compressImage(file);
+                        }
+                        
+                        const base64 = await imageToBase64(processedFile);
+                        imagesToUse.push(base64);
+                    }
+                }
+                
+                // Crear objeto de propiedad
+                const propertyData = {
+                    type,
+                    operation,
+                    title,
+                    description,
+                    address,
+                    zone,
+                    price,
+                    bathrooms,
+                    capacity,
+                    floors,
+                    parking,
+                    amenities,
+                    ownerId: appState.currentUser.id,
+                    phone: appState.currentUser.phone,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                };
+                
+                // Agregar campos opcionales si existen
+                if (area) propertyData.area = area;
+                if (rooms) propertyData.rooms = rooms;
+                if (rules) propertyData.rules = rules;
+                if (checkin) propertyData.checkin = checkin;
+                if (checkout) propertyData.checkout = checkout;
+                
+                // Guardar propiedad
+                if (isEditing) {
+                    // Actualizar propiedad existente
+                    await db.collection('properties').doc(this.dataset.propertyId).update({
+                        ...propertyData,
+                        images: imagesToUse
+                    });
+                    alert('Propiedad actualizada correctamente');
+                } else {
+                    // Crear nueva propiedad
+                    await db.collection('properties').add({
+                        ...propertyData,
+                        images: imagesToUse
+                    });
+                    alert('Propiedad publicada correctamente');
+                }
+                
+                showSection('profile');
+            } catch (error) {
+                console.error('Error publicando propiedad:', error);
+                alert(error.message || 'Error al publicar la propiedad');
+            } finally {
+                publishButton.disabled = false;
+                publishButton.textContent = originalText;
             }
         });
 
@@ -1843,13 +2030,20 @@
         auth.onAuthStateChanged(async (user) => {
             if (user) {
                 // Usuario logueado
-                const doc = await db.collection('users').doc(user.uid).get();
-                if (doc.exists) {
-                    appState.isLoggedIn = true;
-                    appState.currentUser = {
-                        id: user.uid,
-                        ...doc.data()
-                    };
+                try {
+                    const doc = await db.collection('users').doc(user.uid).get();
+                    if (doc.exists) {
+                        appState.isLoggedIn = true;
+                        appState.currentUser = {
+                            id: user.uid,
+                            name: doc.data().name,
+                            phone: doc.data().phone,
+                            email: doc.data().email,
+                            createdAt: doc.data().createdAt.toDate()
+                        };
+                    }
+                } catch (error) {
+                    console.error('Error obteniendo datos de usuario:', error);
                 }
             } else {
                 // Usuario no logueado

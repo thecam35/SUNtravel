@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Hospedajes Cartagena</title>
-    <!-- Agregar los SDK de Firebase -->
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-firestore-compat.js"></script>
@@ -718,8 +717,13 @@
                         
                         <div id="reservations-tab" class="tab-content">
                             <h3>Reservaciones Recibidas</h3>
-                            <div class="reservations-list" id="reservations-list">
-                                <p>Cargando reservaciones...</p>
+                            <div class="reservations-list" id="reservations-received-list">
+                                <p>Cargando reservaciones recibidas...</p>
+                            </div>
+                            
+                            <h3 style="margin-top: 2rem;">Mis Reservaciones</h3>
+                            <div class="reservations-list" id="reservations-made-list">
+                                <p>Cargando mis reservaciones...</p>
                             </div>
                         </div>
                         
@@ -976,56 +980,106 @@
 
         // Función para cargar propiedades
         async function loadProperties(limit = null) {
-            let query = db.collection('properties').orderBy('createdAt', 'desc');
-            if (limit) query = query.limit(limit);
-            
-            const snapshot = await query.get();
-            const properties = [];
-            
-            snapshot.forEach(doc => {
-                properties.push({
-                    id: doc.id,
-                    ...doc.data()
+            try {
+                let query = db.collection('properties').orderBy('createdAt', 'desc');
+                if (limit) query = query.limit(limit);
+                
+                const snapshot = await query.get();
+                const properties = [];
+                
+                snapshot.forEach(doc => {
+                    properties.push({
+                        id: doc.id,
+                        ...doc.data()
+                    });
                 });
-            });
-            
-            return properties;
+                
+                return properties;
+            } catch (error) {
+                console.error("Error loading properties:", error);
+                throw error;
+            }
         }
 
         // Función para cargar propiedades de un usuario
         async function loadUserProperties(userId) {
-            const snapshot = await db.collection('properties')
-                .where('ownerId', '==', userId)
-                .orderBy('createdAt', 'desc')
-                .get();
-            
-            const properties = [];
-            snapshot.forEach(doc => {
-                properties.push({
-                    id: doc.id,
-                    ...doc.data()
+            try {
+                if (!appState.isLoggedIn || appState.currentUser.id !== userId) {
+                    throw new Error("No autorizado para ver estas propiedades");
+                }
+                
+                const snapshot = await db.collection('properties')
+                    .where('ownerId', '==', userId)
+                    .orderBy('createdAt', 'desc')
+                    .get();
+                
+                const properties = [];
+                snapshot.forEach(doc => {
+                    properties.push({
+                        id: doc.id,
+                        ...doc.data()
+                    });
                 });
-            });
-            
-            return properties;
+                
+                return properties;
+            } catch (error) {
+                console.error("Error loading user properties:", error);
+                throw error;
+            }
         }
 
-        // Función para cargar reservaciones
-        async function loadReservations(ownerId) {
-            const snapshot = await db.collection('reservations')
-                .where('ownerId', '==', ownerId)
-                .orderBy('createdAt', 'desc')
-                .get();
-            
-            const reservations = [];
-            snapshot.forEach(doc => {
-                reservations.push({
-                    id: doc.id,
-                    ...doc.data()
+        // Función para cargar reservaciones recibidas (para propietarios)
+        async function loadReceivedReservations(ownerId) {
+            try {
+                if (!appState.isLoggedIn) {
+                    throw new Error("Debes iniciar sesión para ver reservaciones");
+                }
+                
+                const snapshot = await db.collection('reservations')
+                    .where('ownerId', '==', ownerId)
+                    .orderBy('createdAt', 'desc')
+                    .get();
+                
+                const reservations = [];
+                snapshot.forEach(doc => {
+                    reservations.push({
+                        id: doc.id,
+                        ...doc.data()
+                    });
                 });
-            });
-            
-            return reservations;
+                
+                return reservations;
+            } catch (error) {
+                console.error("Error loading received reservations:", error);
+                throw error;
+            }
+        }
+
+        // Función para cargar reservaciones realizadas (para huéspedes)
+        async function loadMadeReservations(guestEmail) {
+            try {
+                if (!appState.isLoggedIn) {
+                    throw new Error("Debes iniciar sesión para ver reservaciones");
+                }
+                
+                const snapshot = await db.collection('reservations')
+                    .where('guestEmail', '==', guestEmail)
+                    .orderBy('createdAt', 'desc')
+                    .get();
+                
+                const reservations = [];
+                snapshot.forEach(doc => {
+                    reservations.push({
+                        id: doc.id,
+                        ...doc.data()
+                    });
+                });
+                
+                return reservations;
+            } catch (error) {
+                console.error("Error loading made reservations:", error);
+                throw error;
+            }
         }
 
         // Función para mostrar propiedades destacadas
@@ -1103,12 +1157,21 @@
                 const property = doc.data();
                 const detailContent = document.getElementById('property-detail-content');
                 
-                // Buscar información del dueño
+                // Buscar información del dueño (solo si el usuario está autenticado)
                 let ownerInfo = { name: "Anfitrión", phone: property.phone };
-                if (property.ownerId) {
-                    const userDoc = await db.collection('users').doc(property.ownerId).get();
-                    if (userDoc.exists) {
-                        ownerInfo = userDoc.data();
+                if (property.ownerId && appState.isLoggedIn) {
+                    try {
+                        const userDoc = await db.collection('users').doc(property.ownerId).get();
+                        if (userDoc.exists) {
+                            ownerInfo = userDoc.data();
+                            
+                            // Ocultar teléfono si no es el propietario
+                            if (property.ownerId !== appState.currentUser.id) {
+                                ownerInfo.phone = "Contactar al anfitrión";
+                            }
+                        }
+                    } catch (error) {
+                        console.error("Error obteniendo info del propietario:", error);
                     }
                 }
                 
@@ -1165,6 +1228,7 @@
                         <p><strong>Check-out:</strong> ${property.checkout || 'No especificado'}</p>
                     </div>
                     
+                    ${appState.isLoggedIn ? `
                     <h3>Reservar esta propiedad</h3>
                     <form id="reservation-form" class="reservation-form">
                         <div class="form-row">
@@ -1187,18 +1251,18 @@
                         <div class="form-row">
                             <div class="form-group">
                                 <label for="reservation-name">Nombre completo:</label>
-                                <input type="text" id="reservation-name" required>
+                                <input type="text" id="reservation-name" value="${appState.currentUser.name || ''}" required>
                             </div>
                             
                             <div class="form-group">
                                 <label for="reservation-phone">Tu teléfono / WhatsApp:</label>
-                                <input type="tel" id="reservation-phone" required>
+                                <input type="tel" id="reservation-phone" value="${appState.currentUser.phone || ''}" required>
                             </div>
                         </div>
                         
                         <div class="form-group">
                             <label for="reservation-email">Tu correo electrónico:</label>
-                            <input type="email" id="reservation-email" required>
+                            <input type="email" id="reservation-email" value="${appState.currentUser.email || ''}" required>
                         </div>
                         
                         <div class="form-group">
@@ -1208,19 +1272,23 @@
                         
                         <button type="submit">Enviar Solicitud de Reserva</button>
                     </form>
+                    ` : '<p>Debes <a href="#" onclick="showSection(\'login\')">iniciar sesión</a> para hacer una reserva.</p>'}
                 `;
                 
-                // Configurar el formulario de reserva
-                document.getElementById('reservation-form').addEventListener('submit', function(e) {
-                    e.preventDefault();
-                    sendReservation(property, ownerInfo);
-                });
+                // Configurar el formulario de reserva si existe
+                const reservationForm = document.getElementById('reservation-form');
+                if (reservationForm) {
+                    reservationForm.addEventListener('submit', function(e) {
+                        e.preventDefault();
+                        sendReservation(property, ownerInfo);
+                    });
+                }
                 
                 // Mostrar la sección de detalle
                 showSection('property-detail');
             } catch (error) {
                 console.error('Error mostrando detalle de propiedad:', error);
-                alert('Error al cargar los detalles de la propiedad');
+                alert('Error al cargar los detalles de la propiedad: ' + error.message);
                 showSection('properties');
             }
         }
@@ -1298,7 +1366,7 @@
             document.getElementById('user-name').textContent = appState.currentUser.name;
             document.getElementById('user-phone').textContent = appState.currentUser.phone;
             document.getElementById('user-email').textContent = appState.currentUser.email;
-            document.getElementById('user-since').textContent = new Date(appState.currentUser.createdAt).toLocaleDateString();
+            document.getElementById('user-since').textContent = appState.currentUser.createdAt.toLocaleDateString();
             
             // Actualizar avatar
             const avatar = document.getElementById('user-avatar');
@@ -1335,23 +1403,23 @@
                 propertiesList.innerHTML = '<p class="error-message">Error cargando propiedades. Por favor intenta nuevamente.</p>';
             }
             
-            // Cargar reservaciones del usuario
-            const reservationsList = document.getElementById('reservations-list');
-            reservationsList.innerHTML = '<p>Cargando reservaciones...</p>';
+            // Cargar reservaciones recibidas (como propietario)
+            const receivedReservationsList = document.getElementById('reservations-received-list');
+            receivedReservationsList.innerHTML = '<p>Cargando reservaciones recibidas...</p>';
             
             try {
-                const reservations = await loadReservations(appState.currentUser.id);
+                const receivedReservations = await loadReceivedReservations(appState.currentUser.id);
                 
-                if (reservations.length === 0) {
-                    reservationsList.innerHTML = '<p>No tienes reservaciones recibidas.</p>';
+                if (receivedReservations.length === 0) {
+                    receivedReservationsList.innerHTML = '<p>No tienes reservaciones recibidas.</p>';
                 } else {
-                    reservationsList.innerHTML = '';
-                    reservations.forEach(reservation => {
+                    receivedReservationsList.innerHTML = '';
+                    receivedReservations.forEach(reservation => {
                         let statusClass = 'status-pending';
                         if (reservation.status === 'confirmed') statusClass = 'status-confirmed';
                         if (reservation.status === 'cancelled') statusClass = 'status-cancelled';
                         
-                        reservationsList.innerHTML += `
+                        receivedReservationsList.innerHTML += `
                             <div class="reservation-card">
                                 <h4>${reservation.propertyTitle}</h4>
                                 <p><strong>Huésped:</strong> ${reservation.guestName}</p>
@@ -1370,8 +1438,40 @@
                     });
                 }
             } catch (error) {
-                console.error('Error cargando reservaciones:', error);
-                reservationsList.innerHTML = '<p class="error-message">Error cargando reservaciones. Por favor intenta nuevamente.</p>';
+                console.error('Error cargando reservaciones recibidas:', error);
+                receivedReservationsList.innerHTML = '<p class="error-message">Error cargando reservaciones recibidas. Por favor intenta nuevamente.</p>';
+            }
+            
+            // Cargar reservaciones realizadas (como huésped)
+            const madeReservationsList = document.getElementById('reservations-made-list');
+            madeReservationsList.innerHTML = '<p>Cargando mis reservaciones...</p>';
+            
+            try {
+                const madeReservations = await loadMadeReservations(appState.currentUser.email);
+                
+                if (madeReservations.length === 0) {
+                    madeReservationsList.innerHTML = '<p>No has realizado ninguna reservación.</p>';
+                } else {
+                    madeReservationsList.innerHTML = '';
+                    madeReservations.forEach(reservation => {
+                        let statusClass = 'status-pending';
+                        if (reservation.status === 'confirmed') statusClass = 'status-confirmed';
+                        if (reservation.status === 'cancelled') statusClass = 'status-cancelled';
+                        
+                        madeReservationsList.innerHTML += `
+                            <div class="reservation-card">
+                                <h4>${reservation.propertyTitle}</h4>
+                                <p><strong>Fechas:</strong> ${formatDate(reservation.checkin)} - ${formatDate(reservation.checkout)}</p>
+                                <p><strong>Huéspedes:</strong> ${reservation.guests}</p>
+                                <p><strong>Estado:</strong> <span class="reservation-status ${statusClass}">${getReservationStatusName(reservation.status)}</span></p>
+                                <p><strong>Mensaje:</strong> ${reservation.message || 'Ninguno'}</p>
+                            </div>
+                        `;
+                    });
+                }
+            } catch (error) {
+                console.error('Error cargando mis reservaciones:', error);
+                madeReservationsList.innerHTML = '<p class="error-message">Error cargando mis reservaciones. Por favor intenta nuevamente.</p>';
             }
         }
 
@@ -1384,6 +1484,11 @@
                 }
                 
                 const property = doc.data();
+                
+                // Verificar que el usuario es el propietario
+                if (property.ownerId !== appState.currentUser.id) {
+                    throw new Error('No tienes permiso para editar esta propiedad');
+                }
                 
                 // Llenar formulario con datos de la propiedad
                 document.getElementById('property-type').value = property.type;
@@ -1432,7 +1537,7 @@
                 showSection('publish');
             } catch (error) {
                 console.error('Error editando propiedad:', error);
-                alert('Error al cargar la propiedad para edición');
+                alert('Error al cargar la propiedad para edición: ' + error.message);
             }
         }
 
@@ -1440,12 +1545,22 @@
         async function deleteProperty(propertyId) {
             if (confirm('¿Estás seguro de que deseas eliminar esta propiedad? Esta acción no se puede deshacer.')) {
                 try {
+                    // Verificar que el usuario es el propietario
+                    const doc = await db.collection('properties').doc(propertyId).get();
+                    if (!doc.exists) {
+                        throw new Error('Propiedad no encontrada');
+                    }
+                    
+                    if (doc.data().ownerId !== appState.currentUser.id) {
+                        throw new Error('No tienes permiso para eliminar esta propiedad');
+                    }
+                    
                     await db.collection('properties').doc(propertyId).delete();
                     alert('Propiedad eliminada correctamente');
                     loadUserProfile();
                 } catch (error) {
                     console.error('Error eliminando propiedad:', error);
-                    alert('Error al eliminar la propiedad');
+                    alert('Error al eliminar la propiedad: ' + error.message);
                 }
             }
         }
@@ -1453,6 +1568,16 @@
         // Función para cambiar estado de reservación
         async function changeReservationStatus(reservationId, status) {
             try {
+                // Verificar que el usuario es el propietario de la propiedad reservada
+                const reservationDoc = await db.collection('reservations').doc(reservationId).get();
+                if (!reservationDoc.exists) {
+                    throw new Error('Reservación no encontrada');
+                }
+                
+                if (reservationDoc.data().ownerId !== appState.currentUser.id) {
+                    throw new Error('No tienes permiso para modificar esta reservación');
+                }
+                
                 await db.collection('reservations').doc(reservationId).update({
                     status: status
                 });
@@ -1461,7 +1586,7 @@
                 loadUserProfile();
             } catch (error) {
                 console.error('Error cambiando estado:', error);
-                alert('Error al cambiar el estado de la reservación');
+                alert('Error al cambiar el estado de la reservación: ' + error.message);
             }
         }
 
@@ -1550,7 +1675,7 @@
                 showSection('home');
             }).catch(error => {
                 console.error('Error al cerrar sesión:', error);
-                alert('Error al cerrar sesión');
+                alert('Error al cerrar sesión: ' + error.message);
             });
         }
 
@@ -2038,7 +2163,7 @@
                             id: user.uid,
                             name: doc.data().name,
                             phone: doc.data().phone,
-                            email: doc.data().email,
+                            email: user.email,
                             createdAt: doc.data().createdAt.toDate()
                         };
                     }
